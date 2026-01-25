@@ -26,6 +26,7 @@ module SchemaEnforcer # to be used with EasyTalk
           name: prop_name,
           key: prop_name.to_s,
           type: rules["type"],
+          ruby_class: TYPE_MAPPING[rules["type"]],
           rules: rules
         }
       end
@@ -44,6 +45,7 @@ module SchemaEnforcer # to be used with EasyTalk
             name: prop_name,
             key: prop_name.to_s,
             type: rules["type"],
+            ruby_class: TYPE_MAPPING[rules["type"]],
             rules: rules
           }
         end
@@ -102,7 +104,7 @@ module SchemaEnforcer # to be used with EasyTalk
       next if value.nil?
 
       expected_json_type = entry[:type]
-      ruby_class = TYPE_MAPPING[expected_json_type]
+      ruby_class = entry[:ruby_class]
 
       if ruby_class
         is_valid_type = ruby_class.is_a?(Array) ? ruby_class.any? { |c| value.is_a?(c) } : value.is_a?(ruby_class)
