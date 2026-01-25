@@ -16,6 +16,23 @@ module SchemaEnforcer # to be used with EasyTalk
     base.extend(ClassMethods)
   end
 
+  def self.schema_cache_for(schema)
+    @schema_hash_cache ||= {}
+    @schema_hash_cache[schema.object_id] ||= begin
+      properties = schema["properties"] || {}
+      required = schema["required"] || []
+      props = properties.map do |prop_name, rules|
+        {
+          name: prop_name,
+          key: prop_name.to_s,
+          type: rules["type"],
+          rules: rules
+        }
+      end
+      { required: required, props: props }
+    end
+  end
+
   module ClassMethods
     def schema_cache
       @schema_cache ||= begin
@@ -59,17 +76,7 @@ module SchemaEnforcer # to be used with EasyTalk
     cache = if !instance.is_a?(Hash) && instance.class.respond_to?(:schema_cache)
       instance.class.schema_cache
     else
-      properties = schema["properties"] || {}
-      required = schema["required"] || []
-      props = properties.map do |prop_name, rules|
-        {
-          name: prop_name,
-          key: prop_name.to_s,
-          type: rules["type"],
-          rules: rules
-        }
-      end
-      { required: required, props: props }
+      SchemaEnforcer.schema_cache_for(schema)
     end
 
     cache[:props].each do |entry|
