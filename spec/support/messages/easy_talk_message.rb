@@ -12,6 +12,29 @@ module SchemaEnforcer # to be used with EasyTalk
     "object"  => Hash
   }.freeze
 
+  def self.included(base)
+    base.extend(ClassMethods)
+  end
+
+  module ClassMethods
+    def schema_cache
+      @schema_cache ||= begin
+        schema = json_schema
+        properties = schema["properties"] || {}
+        required = schema["required"] || []
+        props = properties.map do |prop_name, rules|
+          {
+            name: prop_name,
+            key: prop_name.to_s,
+            type: rules["type"],
+            rules: rules
+          }
+        end
+        { required: required, props: props }
+      end
+    end
+  end
+
   def initialize(attributes = {})
     @errors = ValidationError.new
     if attributes.is_a?(Hash)
@@ -33,25 +56,40 @@ module SchemaEnforcer # to be used with EasyTalk
   end
 
   def validate_against_schema_for(instance, schema, prefix)
-    properties = schema["properties"] || {}
-    required_fields = schema["required"] || []
+    cache = if !instance.is_a?(Hash) && instance.class.respond_to?(:schema_cache)
+      instance.class.schema_cache
+    else
+      properties = schema["properties"] || {}
+      required = schema["required"] || []
+      props = properties.map do |prop_name, rules|
+        {
+          name: prop_name,
+          key: prop_name.to_s,
+          type: rules["type"],
+          rules: rules
+        }
+      end
+      { required: required, props: props }
+    end
 
-    properties.each do |prop_name, rules|
+    cache[:props].each do |entry|
+      prop_name = entry[:name]
+      rules = entry[:rules]
       value = if instance.is_a?(Hash)
-        instance.key?(prop_name.to_s) ? instance[prop_name.to_s] : instance[prop_name.to_sym]
+        instance.key?(entry[:key]) ? instance[entry[:key]] : instance[prop_name.to_sym]
       else
         instance.public_send(prop_name)
       end
       full_key = prefix ? "#{prefix}.#{prop_name}" : prop_name
 
-      if required_fields.include?(prop_name.to_s) && value.nil?
+      if cache[:required].include?(prop_name.to_s) && value.nil?
         @errors.add(key: full_key, value: "is required")
         next
       end
 
       next if value.nil?
 
-      expected_json_type = rules["type"]
+      expected_json_type = entry[:type]
       ruby_class = TYPE_MAPPING[expected_json_type]
 
       if ruby_class

@@ -8,6 +8,20 @@ module DrySchemaEnforcer
   end
 
   module ClassMethods
+    def schema_cache
+      @schema_cache ||= begin
+        schema = self.schema.type
+        schema.keys.map do |key|
+          {
+            name: key.name,
+            string_name: key.name.to_s,
+            required: key.required?,
+            type: key.type
+          }
+        end
+      end
+    end
+
     def new(args = {})
       errors, coerced = validate_all(args)
       raise errors unless errors.errors.empty?
@@ -20,11 +34,9 @@ module DrySchemaEnforcer
       return [errors, args] unless args.is_a?(Hash)
 
       coerced = args.dup
-      schema = self.schema.type
-
-      schema.keys.each do |key|
-        name = key.name
-        string_name = name.to_s
+      schema_cache.each do |entry|
+        name = entry[:name]
+        string_name = entry[:string_name]
         value = if args.key?(name)
           args[name]
         else
@@ -32,11 +44,11 @@ module DrySchemaEnforcer
         end
 
         if value.nil?
-          errors.add(key: string_name, value: "is required") if key.required?
+          errors.add(key: string_name, value: "is required") if entry[:required]
           next
         end
 
-        coerced_value = validate_and_coerce(errors, string_name, key.type, value)
+        coerced_value = validate_and_coerce(errors, string_name, entry[:type], value)
         coerced[name] = coerced_value if args.key?(name)
         coerced[string_name] = coerced_value if args.key?(string_name)
       end
