@@ -8,6 +8,12 @@ module DrySchemaEnforcer
   end
 
   module ClassMethods
+    def add_error(errors, key, value)
+      errors ||= ValidationError.new("Validation failed")
+      errors.add(key: key, value: value)
+      errors
+    end
+
     def schema_cache
       @schema_cache ||= begin
         schema = self.schema.type
@@ -24,13 +30,13 @@ module DrySchemaEnforcer
 
     def new(args = {})
       errors, coerced = validate_all(args)
-      raise errors unless errors.errors.empty?
+      raise errors if errors && !errors.errors.empty?
 
       super(coerced)
     end
 
     def validate_all(args)
-      errors = ValidationError.new("Validation failed")
+      errors = nil
       return [errors, args] unless args.is_a?(Hash)
 
       coerced = args.dup
@@ -44,11 +50,11 @@ module DrySchemaEnforcer
         end
 
         if value.nil?
-          errors.add(key: string_name, value: "is required") if entry[:required]
+          errors = add_error(errors, string_name, "is required") if entry[:required]
           next
         end
 
-        coerced_value = validate_and_coerce(errors, string_name, entry[:type], value)
+        errors, coerced_value = validate_and_coerce(errors, string_name, entry[:type], value)
         coerced[name] = coerced_value if args.key?(name)
         coerced[string_name] = coerced_value if args.key?(string_name)
       end
@@ -61,27 +67,27 @@ module DrySchemaEnforcer
       primitive = nominal.respond_to?(:primitive) ? nominal.primitive : nil
 
       if primitive && primitive < Dry::Struct
-        return value if value.is_a?(primitive)
+        return [errors, value] if value.is_a?(primitive)
 
         if value.is_a?(Hash) && primitive.respond_to?(:validate_all)
           nested_errors, nested_coerced = primitive.validate_all(value)
           if nested_errors && !nested_errors.errors.empty?
             nested_errors.errors.each do |nested_key, messages|
-              messages.each { |msg| errors.add(key: "#{key}.#{nested_key}", value: msg) }
+              messages.each { |msg| errors = add_error(errors, "#{key}.#{nested_key}", msg) }
             end
-            return value
+            return [errors, value]
           end
-          return primitive.new(nested_coerced)
+          return [errors, primitive.new(nested_coerced)]
         end
 
-        errors.add(key: key, value: "must be a #{primitive} (got #{value.class})")
-        return value
+        errors = add_error(errors, key, "must be a #{primitive} (got #{value.class})")
+        return [errors, value]
       end
 
       if primitive == Array && nominal.respond_to?(:member)
         unless value.is_a?(Array)
-          errors.add(key: key, value: "must be an Array (got #{value.class})")
-          return value
+          errors = add_error(errors, key, "must be an Array (got #{value.class})")
+          return [errors, value]
         end
 
         member_type = nominal.member
@@ -94,7 +100,7 @@ module DrySchemaEnforcer
               nested_errors, nested_coerced = nested_class.validate_all(item)
               if nested_errors && !nested_errors.errors.empty?
                 nested_errors.errors.each do |nested_key, messages|
-                  messages.each { |msg| errors.add(key: "#{item_key}.#{nested_key}", value: msg) }
+                  messages.each { |msg| errors = add_error(errors, "#{item_key}.#{nested_key}", msg) }
                 end
               else
                 coerced[index] = nested_class.new(nested_coerced)
@@ -103,13 +109,13 @@ module DrySchemaEnforcer
             end
           end
 
-          errors.add(key: item_key, value: "is invalid") unless member_type.valid?(item)
+          errors = add_error(errors, item_key, "is invalid") unless member_type.valid?(item)
         end
-        return coerced
+        return [errors, coerced]
       end
 
-      errors.add(key: key, value: "is invalid") unless type.valid?(value)
-      value
+      errors = add_error(errors, key, "is invalid") unless type.valid?(value)
+      [errors, value]
     end
   end
 end

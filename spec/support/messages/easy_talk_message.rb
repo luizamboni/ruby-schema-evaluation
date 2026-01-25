@@ -53,19 +53,24 @@ module SchemaEnforcer # to be used with EasyTalk
   end
 
   def initialize(attributes = {})
-    @errors = ValidationError.new
+    @errors = nil
     if attributes.is_a?(Hash)
       validate_against_schema_for(attributes, self.class.json_schema, nil)
-      raise @errors unless @errors.errors.empty?
+      raise @errors if @errors && !@errors.errors.empty?
     end
 
     super(attributes)
 
     validate_against_schema
-    raise @errors unless @errors.errors.empty?
+    raise @errors if @errors && !@errors.errors.empty?
   end
 
   private
+
+  def add_error(key:, value:)
+    @errors ||= ValidationError.new
+    @errors.add(key: key, value: value)
+  end
 
   def validate_against_schema
     validate_against_schema_for(self, self.class.json_schema, nil)
@@ -90,7 +95,7 @@ module SchemaEnforcer # to be used with EasyTalk
       full_key = prefix ? "#{prefix}.#{prop_name}" : prop_name
 
       if cache[:required].include?(prop_name.to_s) && value.nil?
-        @errors.add(key: full_key, value: "is required")
+        add_error(key: full_key, value: "is required")
         next
       end
 
@@ -106,7 +111,7 @@ module SchemaEnforcer # to be used with EasyTalk
         end
 
         unless is_valid_type
-          @errors.add(key: full_key, value: "must be a #{expected_json_type} (got #{value.class})")
+          add_error(key: full_key, value: "must be a #{expected_json_type} (got #{value.class})")
           next
         end
       end

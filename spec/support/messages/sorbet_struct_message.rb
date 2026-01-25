@@ -24,15 +24,26 @@ module SorbetSchemaEnforcer
   end
 
   module ClassMethods
+    def add_error(errors, key, value)
+      errors ||= ValidationError.new("Validation failed")
+      errors.add(key: key, value: value)
+      errors
+    end
+
+    def error_count(errors)
+      return 0 unless errors
+      errors.errors.values.sum(&:size)
+    end
+
     def validate_all(args)
-      errors = ValidationError.new("Validation failed")
+      errors = nil
       return [errors, args] unless args.is_a?(Hash)
 
       cache = SorbetSchemaEnforcer.struct_cache_for(self)
       known_keys = cache[:known_keys]
       args.keys.map(&:to_s).each do |key|
         next if known_keys.include?(key)
-        errors.add(key: key, value: "is not permitted")
+        errors = add_error(errors, key, "is not permitted")
       end
 
       coerced = args.dup
@@ -42,11 +53,11 @@ module SorbetSchemaEnforcer
         value = args.key?(name) ? args[name] : args[key]
 
         if value.nil?
-          errors.add(key: key, value: "is required") unless entry[:fully_optional]
+          errors = add_error(errors, key, "is required") unless entry[:fully_optional]
           next
         end
 
-        coerced_value = validate_and_coerce(errors, key, entry[:type], entry[:type_object], value)
+        errors, coerced_value = validate_and_coerce(errors, key, entry[:type], entry[:type_object], value)
         coerced[name] = coerced_value if args.key?(name)
         coerced[key] = coerced_value if args.key?(key)
       end
@@ -56,23 +67,23 @@ module SorbetSchemaEnforcer
 
     def validate_and_coerce(errors, key, type, type_object, value)
       if type.is_a?(Class) && type < T::Struct
-        return value if value.is_a?(type)
+        return [errors, value] if value.is_a?(type)
 
         if value.is_a?(Hash)
-          before = errors.errors.dup
-          coerced = validate_struct_hash(errors, key, type, value)
-          return type.new(coerced) if before == errors.errors
-          return value
+          before_count = error_count(errors)
+          errors, coerced = validate_struct_hash(errors, key, type, value)
+          return [errors, type.new(coerced)] if error_count(errors) == before_count
+          return [errors, value]
         end
 
-        errors.add(key: key, value: "must be a #{type} (got #{value.class})")
-        return value
+        errors = add_error(errors, key, "must be a #{type} (got #{value.class})")
+        return [errors, value]
       end
 
       if type_object.is_a?(T::Types::TypedArray)
         unless value.is_a?(Array)
-          errors.add(key: key, value: "must be an Array (got #{value.class})")
-          return value
+          errors = add_error(errors, key, "must be an Array (got #{value.class})")
+          return [errors, value]
         end
 
         element_type = type_object.type
@@ -81,30 +92,32 @@ module SorbetSchemaEnforcer
           item_key = "#{key}[#{index}]"
           if element_type.is_a?(Class) && element_type < T::Struct
             if item.is_a?(Hash)
-              before = errors.errors.dup
-              validate_struct_hash(errors, item_key, element_type, item)
-              coerced[index] = item if before != errors.errors
+              before_count = error_count(errors)
+              errors, nested_coerced = validate_struct_hash(errors, item_key, element_type, item)
+              if error_count(errors) == before_count
+                coerced[index] = element_type.new(nested_coerced)
+              end
               next
             end
 
             unless item.is_a?(element_type)
-              errors.add(key: item_key, value: "is invalid")
+              errors = add_error(errors, item_key, "is invalid")
             end
             next
           end
 
           if element_type.respond_to?(:valid?) && !element_type.valid?(item)
-            errors.add(key: item_key, value: "is invalid")
+            errors = add_error(errors, item_key, "is invalid")
           end
         end
-        return coerced
+        return [errors, coerced]
       end
 
       if type_object.respond_to?(:valid?) && !type_object.valid?(value)
-        errors.add(key: key, value: "is invalid")
+        errors = add_error(errors, key, "is invalid")
       end
 
-      value
+      [errors, value]
     end
 
     def validate_struct_hash(errors, key, struct_class, hash)
@@ -112,7 +125,7 @@ module SorbetSchemaEnforcer
       known_keys = cache[:known_keys]
       hash.keys.map(&:to_s).each do |k|
         next if known_keys.include?(k)
-        errors.add(key: "#{key}.#{k}", value: "is not permitted")
+        errors = add_error(errors, "#{key}.#{k}", "is not permitted")
       end
 
       coerced = hash.dup
@@ -123,23 +136,23 @@ module SorbetSchemaEnforcer
         full_key = "#{key}.#{prop_key}"
 
         if value.nil?
-          errors.add(key: full_key, value: "is required") unless entry[:fully_optional]
+          errors = add_error(errors, full_key, "is required") unless entry[:fully_optional]
           next
         end
 
-        coerced_value = validate_and_coerce(errors, full_key, entry[:type], entry[:type_object], value)
+        errors, coerced_value = validate_and_coerce(errors, full_key, entry[:type], entry[:type_object], value)
         coerced[name] = coerced_value if hash.key?(name)
         coerced[prop_key] = coerced_value if hash.key?(prop_key)
       end
 
-      coerced
+      [errors, coerced]
     end
   end
 
   module InstanceMethods
     def initialize(args)
       errors, coerced = self.class.validate_all(args)
-      raise errors unless errors.errors.empty?
+      raise errors if errors && !errors.errors.empty?
 
       super(coerced)
     end
