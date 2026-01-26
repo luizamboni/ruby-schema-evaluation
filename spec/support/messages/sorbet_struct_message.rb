@@ -25,14 +25,14 @@ module SorbetSchemaEnforcer
 
   module ClassMethods
     def add_error(errors, key, value)
-      errors ||= ValidationError.new("Validation failed")
-      errors.add(key: key, value: value)
+      errors ||= Hash.new { |hash, k| hash[k] = [] }
+      errors[key] << value
       errors
     end
 
     def error_count(errors)
       return 0 unless errors
-      errors.errors.values.sum(&:size)
+      errors.values.sum(&:size)
     end
 
     def validate_all(args)
@@ -152,7 +152,11 @@ module SorbetSchemaEnforcer
   module InstanceMethods
     def initialize(args)
       errors, coerced = self.class.validate_all(args)
-      raise errors if errors && !errors.errors.empty?
+      if errors && !errors.empty?
+        error = ValidationError.new("Validation failed")
+        error.errors = errors
+        raise error
+      end
 
       super(coerced)
     end

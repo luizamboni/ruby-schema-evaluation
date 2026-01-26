@@ -58,20 +58,28 @@ module SchemaEnforcer # to be used with EasyTalk
     @errors = nil
     if attributes.is_a?(Hash)
       validate_against_schema_for(attributes, self.class.json_schema, nil)
-      raise @errors if @errors && !@errors.errors.empty?
+      if @errors && !@errors.empty?
+        error = ValidationError.new("Validation failed")
+        error.errors = @errors
+        raise error
+      end
     end
 
     super(attributes)
 
     validate_against_schema
-    raise @errors if @errors && !@errors.errors.empty?
+    if @errors && !@errors.empty?
+      error = ValidationError.new("Validation failed")
+      error.errors = @errors
+      raise error
+    end
   end
 
   private
 
   def add_error(key:, value:)
-    @errors ||= ValidationError.new
-    @errors.add(key: key, value: value)
+    @errors ||= Hash.new { |hash, k| hash[k] = [] }
+    @errors[key] << value
   end
 
   def validate_against_schema

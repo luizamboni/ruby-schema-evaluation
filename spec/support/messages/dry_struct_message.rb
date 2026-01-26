@@ -9,8 +9,17 @@ module DrySchemaEnforcer
 
   module ClassMethods
     def add_error(errors, key, value)
-      errors ||= ValidationError.new("Validation failed")
-      errors.add(key: key, value: value)
+      errors ||= Hash.new { |hash, k| hash[k] = [] }
+      errors[key] << value
+      errors
+    end
+
+    def merge_errors(errors, prefix, nested_errors)
+      return errors unless nested_errors && !nested_errors.empty?
+      errors ||= Hash.new { |hash, k| hash[k] = [] }
+      nested_errors.each do |nested_key, messages|
+        messages.each { |msg| errors["#{prefix}.#{nested_key}"] << msg }
+      end
       errors
     end
 
@@ -30,7 +39,11 @@ module DrySchemaEnforcer
 
     def new(args = {})
       errors, coerced = validate_all(args)
-      raise errors if errors && !errors.errors.empty?
+      if errors && !errors.empty?
+        error = ValidationError.new("Validation failed")
+        error.errors = errors
+        raise error
+      end
 
       super(coerced)
     end
@@ -71,10 +84,8 @@ module DrySchemaEnforcer
 
         if value.is_a?(Hash) && primitive.respond_to?(:validate_all)
           nested_errors, nested_coerced = primitive.validate_all(value)
-          if nested_errors && !nested_errors.errors.empty?
-            nested_errors.errors.each do |nested_key, messages|
-              messages.each { |msg| errors = add_error(errors, "#{key}.#{nested_key}", msg) }
-            end
+          if nested_errors && !nested_errors.empty?
+            errors = merge_errors(errors, key, nested_errors)
             return [errors, value]
           end
           return [errors, primitive.new(nested_coerced)]
@@ -98,10 +109,8 @@ module DrySchemaEnforcer
             nested_class = member_type.type.primitive
             if item.is_a?(Hash) && nested_class.respond_to?(:validate_all)
               nested_errors, nested_coerced = nested_class.validate_all(item)
-              if nested_errors && !nested_errors.errors.empty?
-                nested_errors.errors.each do |nested_key, messages|
-                  messages.each { |msg| errors = add_error(errors, "#{item_key}.#{nested_key}", msg) }
-                end
+              if nested_errors && !nested_errors.empty?
+                errors = merge_errors(errors, item_key, nested_errors)
               else
                 coerced[index] = nested_class.new(nested_coerced)
               end
