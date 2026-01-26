@@ -24,6 +24,14 @@ module SorbetSchemaEnforcer
   end
 
   module ClassMethods
+    def fast_array_validation(value = nil)
+      if value.nil?
+        @fast_array_validation || false
+      else
+        @fast_array_validation = value
+      end
+    end
+
     def add_error(errors, key, value)
       errors ||= Hash.new { |hash, k| hash[k] = [] }
       errors[key] << value
@@ -88,6 +96,10 @@ module SorbetSchemaEnforcer
 
         element_type = type_object.type
         coerced = value.dup
+        if fast_array_validation && element_type.respond_to?(:valid?)
+          all_valid = value.all? { |item| element_type.valid?(item) }
+          return [errors, coerced] if all_valid
+        end
         value.each_with_index do |item, index|
           item_key = "#{key}[#{index}]"
           if element_type.is_a?(Class) && element_type < T::Struct
@@ -169,6 +181,7 @@ end
 
 class SorbetStructMessage < T::Struct
   include SorbetSchemaEnforcer
+  fast_array_validation true
 
   const :error, String
   const :message, String

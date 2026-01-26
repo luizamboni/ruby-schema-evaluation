@@ -8,6 +8,14 @@ module DrySchemaEnforcer
   end
 
   module ClassMethods
+    def fast_array_validation(value = nil)
+      if value.nil?
+        @fast_array_validation || false
+      else
+        @fast_array_validation = value
+      end
+    end
+
     def add_error(errors, key, value)
       errors ||= Hash.new { |hash, k| hash[k] = [] }
       errors[key] << value
@@ -103,6 +111,10 @@ module DrySchemaEnforcer
 
         member_type = nominal.member
         coerced = value.dup
+        if fast_array_validation
+          all_valid = value.all? { |item| member_type.valid?(item) }
+          return [errors, coerced] if all_valid
+        end
         value.each_with_index do |item, index|
           item_key = "#{key}[#{index}]"
           if member_type.respond_to?(:type) && member_type.type.respond_to?(:primitive) && member_type.type.primitive < Dry::Struct
@@ -131,6 +143,7 @@ end
 
 class DryStructMessageDetails < Dry::Struct
   include DrySchemaEnforcer
+  fast_array_validation true
 
   attribute :messages, Types::Strict::Array.of(Types::Strict::String)
 end
