@@ -127,6 +127,10 @@ module SchemaEnforcer # to be used with EasyTalk
       end
 
       if expected_json_type == "object"
+        if !value.is_a?(Hash) && value.class.respond_to?(:json_schema)
+          next
+        end
+
         nested_schema = if value.class.respond_to?(:json_schema)
           value.class.json_schema
         else
