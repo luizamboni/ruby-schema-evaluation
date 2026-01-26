@@ -1,6 +1,6 @@
 # Benchmark Diff (lightweight error accumulator)
 
-Compared against `README.md` baseline (10_000 iterations).
+Compared against `BENCHMARK_INITIAL.md` baseline (10_000 iterations).
 
 ## Validation (construct + validate) time deltas
 ```

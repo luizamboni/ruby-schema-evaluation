@@ -1,6 +1,6 @@
 # Benchmark Diff (after schema cache memoization)
 
-Compared against `README.md` baseline (10_000 iterations).
+Compared against `BENCHMARK_INITIAL.md` baseline (10_000 iterations).
 
 ## Validation (construct + validate) time deltas
 ```
