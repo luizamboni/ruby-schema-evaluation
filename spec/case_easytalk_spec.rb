@@ -14,6 +14,22 @@ RSpec.describe "EasyTalk nested models" do
     expect(message.details.messages).to eq(["ok"])
   end
 
+  it "raises UnknownAttributeError for unexpected top-level fields" do
+    expect {
+      EasyTalkMessage.new(error: "ok", message: "hi", details: { messages: ["ok"] }, extra: "nope")
+    }.to raise_error(ActiveModel::UnknownAttributeError)
+  end
+
+  it "raises UnknownAttributeError for unexpected nested fields" do
+    expect {
+      EasyTalkMessage.new(
+        error: "NOT_FOUND",
+        message: "missing",
+        details: { messages: ["ok"], extra: "nope" }
+      )
+    }.to raise_error(ActiveModel::UnknownAttributeError)
+  end
+
   it "accepts a nested EasyTalk model instance for object properties" do
     details = EasyTalkMessageDetails.new(messages: ["ok"])
 

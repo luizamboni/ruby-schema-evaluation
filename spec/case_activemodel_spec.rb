@@ -23,6 +23,22 @@ RSpec.describe "ActiveModel case" do
     expect(message.details.messages).to eq(["ok"])
   end
 
+  it "raises UnknownAttributeError for unexpected top-level fields" do
+    expect {
+      ActiveModelMessage.new(error: "ok", message: "hi", details: { messages: ["ok"] }, extra: "nope")
+    }.to raise_error(ActiveModel::UnknownAttributeError)
+  end
+
+  it "raises UnknownAttributeError for unexpected nested fields" do
+    expect {
+      ActiveModelMessage.new(
+        error: "NOT_FOUND",
+        message: "missing",
+        details: { messages: ["ok"], extra: "nope" }
+      )
+    }.to raise_error(ActiveModel::UnknownAttributeError)
+  end
+
   it "builds a valid instance with nested hash" do
     message = ActiveModelMessage.new(
       error: "NOT_FOUND",

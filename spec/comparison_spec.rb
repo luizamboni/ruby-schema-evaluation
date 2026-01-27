@@ -42,6 +42,11 @@ RSpec.describe "Validation comparison matrix" do
       expect(result.errors.to_h).to eq({})
     end
 
+    it "9) unknown properties (nested ignored by schema)" do
+      result = DryValidataionMessage.new.(valid_hash.merge(details: { messages: ["ok"], foo: "bar" }))
+      expect(result.errors.to_h).to eq({})
+    end
+
     it "8) exception vs errors API" do
       expect { DryValidataionMessage.new.(valid_hash.merge(message: 1)) }.not_to raise_error
     end
@@ -82,6 +87,11 @@ RSpec.describe "Validation comparison matrix" do
 
     it "7) unknown properties (top-level)" do
       expect { DryStructMessage.new(valid_hash.merge(details: details, foo: "bar")) }
+        .not_to raise_error
+    end
+
+    it "9) unknown properties (nested ignored)" do
+      expect { DryStructMessage.new(valid_hash.merge(details: { messages: ["ok"], foo: "bar" })) }
         .not_to raise_error
     end
 
@@ -126,6 +136,11 @@ RSpec.describe "Validation comparison matrix" do
 
     it "7) unknown properties (top-level)" do
       expect { SorbetStructMessage.new(valid_hash.merge(details: details, foo: "bar")) }
+        .to raise_error(ValidationError)
+    end
+
+    it "9) unknown properties (nested)" do
+      expect { SorbetStructMessage.new(valid_hash.merge(details: { messages: ["ok"], foo: "bar" })) }
         .to raise_error(ValidationError)
     end
 

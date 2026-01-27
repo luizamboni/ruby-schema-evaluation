@@ -17,6 +17,24 @@ RSpec.describe "Dry::Struct case" do
     expect(message.details.messages).to eq(["ok"])
   end
 
+  it "ignores unexpected top-level fields" do
+    details = DryStructMessageDetails.new(messages: ["ok"])
+
+    expect {
+      DryStructMessage.new(error: "ok", message: "hi", details: details, extra: "nope")
+    }.not_to raise_error
+  end
+
+  it "ignores unexpected nested fields" do
+    expect {
+      DryStructMessage.new(
+        error: "NOT_FOUND",
+        message: "missing",
+        details: { messages: ["ok"], extra: "nope" }
+      )
+    }.not_to raise_error
+  end
+
   it "builds a valid instance with nested hash" do
     message = DryStructMessage.new(
       error: "NOT_FOUND",

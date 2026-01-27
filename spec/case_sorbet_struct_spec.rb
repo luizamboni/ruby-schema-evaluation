@@ -19,6 +19,28 @@ RSpec.describe "Sorbet T::Struct case" do
     expect(message.details.messages).to eq(["ok"])
   end
 
+  it "raises ValidationError for unexpected top-level fields" do
+    details = SorbetStructMessageDetails.new(messages: ["ok"])
+
+    expect {
+      SorbetStructMessage.new(error: "ok", message: "hi", details: details, extra: "nope")
+    }.to raise_error(ValidationError) { |e|
+      expect(e.errors).to eq({ "extra" => ["is not permitted"] })
+    }
+  end
+
+  it "raises ValidationError for unexpected nested fields" do
+    expect {
+      SorbetStructMessage.new(
+        error: "NOT_FOUND",
+        message: "missing",
+        details: { messages: ["ok"], extra: "nope" }
+      )
+    }.to raise_error(ValidationError) { |e|
+      expect(e.errors).to eq({ "details.extra" => ["is not permitted"] })
+    }
+  end
+
   it "builds a valid instance with nested hash" do
     message = SorbetStructMessage.new(
       error: "NOT_FOUND",

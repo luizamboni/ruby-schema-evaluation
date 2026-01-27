@@ -27,6 +27,17 @@ end
 
 This repo is a comparative study of Ruby DTO/schema approaches under different validation strategies and error‑handling styles. It benchmarks correctness behavior, performance, and memory usage across multiple libraries and custom enforcers.
 
+## Unexpected fields (DTO input)
+Behavior when callers pass extra properties that are not defined in the DTO schema (top-level or nested):
+
+| DTO / Validator | Top-level unknowns | Nested unknowns |
+| --- | --- | --- |
+| Dry::Validation | ignored | ignored |
+| Dry::Struct | ignored | ignored |
+| Sorbet T::Struct | raises `ValidationError` (`is not permitted`) | raises `ValidationError` (`is not permitted`) |
+| EasyTalk (SchemaEnforcer) | raises `ActiveModel::UnknownAttributeError` | raises `ActiveModel::UnknownAttributeError` |
+| ActiveModel | raises `ActiveModel::UnknownAttributeError` | raises `ActiveModel::UnknownAttributeError` |
+
 ## Goals
 - Compare validation behavior across approaches (happy path and failure path).
 - Measure performance (time) and memory allocations.
