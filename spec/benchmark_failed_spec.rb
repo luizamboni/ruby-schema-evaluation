@@ -141,6 +141,14 @@ RSpec.describe "Validation benchmark (failed cases)" do
       end
     when :strong_parameters
       false
+    when :strong_parameters_expect
+      begin
+        ActionController::Parameters.new(invalid_payload)
+          .expect(:error, :message, details: { messages: [] })
+        false
+      rescue ActionController::ParameterMissing
+        true
+      end
     when :strong_parameters_permit_all
       false
     else
@@ -203,6 +211,14 @@ RSpec.describe "Validation benchmark (failed cases)" do
       end
     when :strong_parameters
       "-"
+    when :strong_parameters_expect
+      begin
+        ActionController::Parameters.new(invalid_payload)
+          .expect(:error, :message, details: { messages: [] })
+        "-"
+      rescue ActionController::ParameterMissing => e
+        e.class.name
+      end
     when :strong_parameters_permit_all
       "-"
     else
@@ -437,6 +453,29 @@ RSpec.describe "Validation benchmark (failed cases)" do
       end
     }
 
+    results[:strong_parameters_expect] = {
+      time: Benchmark.realtime do
+        run_validations(FAILED_ITERATIONS) do
+          begin
+            ActionController::Parameters.new(invalid_payload)
+              .expect(:error, :message, details: { messages: [] })
+          rescue ActionController::ParameterMissing
+            nil
+          end
+        end
+      end,
+      mem: measure_memory do
+        run_validations(FAILED_ITERATIONS) do
+          begin
+            ActionController::Parameters.new(invalid_payload)
+              .expect(:error, :message, details: { messages: [] })
+          rescue ActionController::ParameterMissing
+            nil
+          end
+        end
+      end
+    }
+
     results[:strong_parameters_permit_all] = {
       time: Benchmark.realtime do
         run_validations(FAILED_ITERATIONS) do
@@ -482,6 +521,7 @@ RSpec.describe "Validation benchmark (failed cases)" do
       :activemodel_plain,
       :active_record,
       :strong_parameters,
+      :strong_parameters_expect,
       :strong_parameters_permit_all
     ])
   end
@@ -580,6 +620,16 @@ RSpec.describe "Validation benchmark (failed cases)" do
             .permit(:error, :message, details: { messages: [] })
         end
       },
+      strong_parameters_expect: -> {
+        run_validations(FAILED_ITERATIONS) do
+          begin
+            ActionController::Parameters.new(invalid_payload)
+              .expect(:error, :message, details: { messages: [] })
+          rescue ActionController::ParameterMissing
+            nil
+          end
+        end
+      },
       strong_parameters_permit_all: -> {
         run_validations(FAILED_ITERATIONS) do
           ActionController::Parameters.new(invalid_payload).permit!
@@ -636,6 +686,7 @@ RSpec.describe "Validation benchmark (failed cases)" do
       :activemodel_plain,
       :active_record,
       :strong_parameters,
+      :strong_parameters_expect,
       :strong_parameters_permit_all
     ])
   end

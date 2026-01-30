@@ -103,6 +103,15 @@ RSpec.describe "Validation benchmark" do
     obj
   end
 
+  def strong_parameters_expect_hash(params)
+    error, message, details = params.expect(:error, :message, details: { messages: [] })
+    {
+      error: error,
+      message: message,
+      details: serialize_value(details)
+    }
+  end
+
   it "runs #{ITERATIONS} validations for each approach" do
     results = {}
 
@@ -337,6 +346,27 @@ RSpec.describe "Validation benchmark" do
       end
     }
 
+    results[:strong_parameters_expect] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          ActionController::Parameters.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: { messages: ["ok"] }
+          ).expect(:error, :message, details: { messages: [] })
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          ActionController::Parameters.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: { messages: ["ok"] }
+          ).expect(:error, :message, details: { messages: [] })
+        end
+      end
+    }
+
     results[:strong_parameters_permit_all] = {
       time: Benchmark.realtime do
         run_validations(ITERATIONS) do
@@ -379,6 +409,7 @@ RSpec.describe "Validation benchmark" do
       :activemodel_plain,
       :active_record,
       :strong_parameters,
+      :strong_parameters_expect,
       :strong_parameters_permit_all
     ])
   end
@@ -450,6 +481,14 @@ RSpec.describe "Validation benchmark" do
       details: { messages: ["ok"] }
     ).permit(:error, :message, details: { messages: [] })
 
+    strong_parameters_expect_instance = strong_parameters_expect_hash(
+      ActionController::Parameters.new(
+        error: "NOT_FOUND",
+        message: "missing",
+        details: { messages: ["ok"] }
+      )
+    )
+
     strong_parameters_permit_all_instance = ActionController::Parameters.new(
       error: "NOT_FOUND",
       message: "missing",
@@ -468,6 +507,7 @@ RSpec.describe "Validation benchmark" do
       activemodel_plain: -> { serialize_value(activemodel_plain_instance) },
       active_record: -> { serialize_value(active_record_instance) },
       strong_parameters: -> { serialize_value(strong_parameters_instance) },
+      strong_parameters_expect: -> { serialize_value(strong_parameters_expect_instance) },
       strong_parameters_permit_all: -> { serialize_value(strong_parameters_permit_all_instance) }
     }
 
@@ -596,6 +636,17 @@ RSpec.describe "Validation benchmark" do
             message: "missing",
             details: { messages: ["ok"] }
           ).permit(:error, :message, details: { messages: [] })
+        )
+      },
+      strong_parameters_expect: -> {
+        serialize_value(
+          strong_parameters_expect_hash(
+            ActionController::Parameters.new(
+              error: "NOT_FOUND",
+              message: "missing",
+              details: { messages: ["ok"] }
+            )
+          )
         )
       },
       strong_parameters_permit_all: -> {
@@ -738,6 +789,17 @@ RSpec.describe "Validation benchmark" do
           ).permit(:error, :message, details: { messages: [] })
         end
       },
+      strong_parameters_expect: -> {
+        run_validations(ITERATIONS) do
+          strong_parameters_expect_hash(
+            ActionController::Parameters.new(
+              error: "NOT_FOUND",
+              message: "missing",
+              details: { messages: ["ok"] }
+            )
+          )
+        end
+      },
       strong_parameters_permit_all: -> {
         run_validations(ITERATIONS) do
           ActionController::Parameters.new(
@@ -785,6 +847,7 @@ RSpec.describe "Validation benchmark" do
       :activemodel_plain,
       :active_record,
       :strong_parameters,
+      :strong_parameters_expect,
       :strong_parameters_permit_all
     ])
   end

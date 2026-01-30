@@ -8,10 +8,11 @@ gem "dry-struct"
 gem "sorbet-runtime"
 gem "easy_talk"
 
-gem "activemodel"
-gem "activerecord"
+gem "activesupport", "~> 8.1.0"
+gem "activemodel", "~> 8.1.0"
+gem "activerecord", "~> 8.1.0"
 gem "sqlite3"
-gem "actionpack"
+gem "actionpack", "~> 8.1.0"
 
 gem "debug"
 
