@@ -9,6 +9,9 @@ gem "sorbet-runtime"
 gem "easy_talk"
 
 gem "activemodel"
+gem "activerecord"
+gem "sqlite3"
+gem "actionpack"
 
 gem "debug"
 

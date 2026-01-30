@@ -3,6 +3,7 @@ require "benchmark"
 require "json"
 require "objspace"
 require "memory_profiler"
+require "action_controller"
 
 RSpec.describe "Validation benchmark" do
   ITERATIONS = 10_000
@@ -294,13 +295,76 @@ RSpec.describe "Validation benchmark" do
       end
     }
 
+    results[:active_record] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          ActiveRecordMessage.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: { messages: ["ok"] }
+          )
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          ActiveRecordMessage.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: { messages: ["ok"] }
+          )
+        end
+      end
+    }
+
+    results[:strong_parameters] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          ActionController::Parameters.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: { messages: ["ok"] }
+          ).permit(:error, :message, details: { messages: [] })
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          ActionController::Parameters.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: { messages: ["ok"] }
+          ).permit(:error, :message, details: { messages: [] })
+        end
+      end
+    }
+
+    results[:strong_parameters_permit_all] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          ActionController::Parameters.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: { messages: ["ok"] }
+          ).permit!
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          ActionController::Parameters.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: { messages: ["ok"] }
+          ).permit!
+        end
+      end
+    }
+
     puts "\n== validation (#{ITERATIONS} iterations) =="
-    puts format("%-20s %10s %12s %12s", "name", "time(s)", "us/op", "bytes")
+    puts format("%-30s %10s %12s %12s", "name", "time(s)", "us/op", "bytes")
     results
       .sort_by { |_, data| data[:time] }
       .each do |name, data|
         us_per_op = (data[:time] * 1_000_000.0 / ITERATIONS)
-        puts format("%-20s %10.4f %12.2f %12d", name, data[:time], us_per_op, data[:mem])
+        puts format("%-30s %10.4f %12.2f %12d", name, data[:time], us_per_op, data[:mem])
       end
 
     expect(results.keys).to match_array([
@@ -312,7 +376,10 @@ RSpec.describe "Validation benchmark" do
       :easytalk,
       :easytalk_plain,
       :activemodel,
-      :activemodel_plain
+      :activemodel_plain,
+      :active_record,
+      :strong_parameters,
+      :strong_parameters_permit_all
     ])
   end
 
@@ -371,6 +438,24 @@ RSpec.describe "Validation benchmark" do
       details: ActiveModelPlainMessageDetails.new(messages: ["ok"])
     )
 
+    active_record_instance = ActiveRecordMessage.new(
+      error: "NOT_FOUND",
+      message: "missing",
+      details: { messages: ["ok"] }
+    )
+
+    strong_parameters_instance = ActionController::Parameters.new(
+      error: "NOT_FOUND",
+      message: "missing",
+      details: { messages: ["ok"] }
+    ).permit(:error, :message, details: { messages: [] })
+
+    strong_parameters_permit_all_instance = ActionController::Parameters.new(
+      error: "NOT_FOUND",
+      message: "missing",
+      details: { messages: ["ok"] }
+    ).permit!
+
     targets = {
       dry_validation: -> { serialize_value(dry_validation_result.to_h) },
       dry_struct: -> { serialize_value(dry_struct_instance) },
@@ -380,7 +465,10 @@ RSpec.describe "Validation benchmark" do
       easytalk: -> { serialize_value(easytalk_instance) },
       easytalk_plain: -> { serialize_value(easytalk_plain_instance) },
       activemodel: -> { serialize_value(activemodel_instance) },
-      activemodel_plain: -> { serialize_value(activemodel_plain_instance) }
+      activemodel_plain: -> { serialize_value(activemodel_plain_instance) },
+      active_record: -> { serialize_value(active_record_instance) },
+      strong_parameters: -> { serialize_value(strong_parameters_instance) },
+      strong_parameters_permit_all: -> { serialize_value(strong_parameters_permit_all_instance) }
     }
 
     results = {}
@@ -400,12 +488,12 @@ RSpec.describe "Validation benchmark" do
     end
 
     puts "\n== serialization json (#{ITERATIONS} iterations) =="
-    puts format("%-20s %10s %12s %12s", "name", "time(s)", "us/op", "bytes")
+    puts format("%-30s %10s %12s %12s", "name", "time(s)", "us/op", "bytes")
     results
       .sort_by { |_, data| data[:time] }
       .each do |name, data|
         us_per_op = (data[:time] * 1_000_000.0 / ITERATIONS)
-        puts format("%-20s %10.4f %12.2f %12d", name, data[:time], us_per_op, data[:mem])
+        puts format("%-30s %10.4f %12.2f %12d", name, data[:time], us_per_op, data[:mem])
       end
 
     expect(results.keys).to match_array(targets.keys)
@@ -491,6 +579,33 @@ RSpec.describe "Validation benchmark" do
             details: ActiveModelPlainMessageDetails.new(messages: ["ok"])
           )
         )
+      },
+      active_record: -> {
+        serialize_value(
+          ActiveRecordMessage.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: { messages: ["ok"] }
+          )
+        )
+      },
+      strong_parameters: -> {
+        serialize_value(
+          ActionController::Parameters.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: { messages: ["ok"] }
+          ).permit(:error, :message, details: { messages: [] })
+        )
+      },
+      strong_parameters_permit_all: -> {
+        serialize_value(
+          ActionController::Parameters.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: { messages: ["ok"] }
+          ).permit!
+        )
       }
     }
 
@@ -511,12 +626,12 @@ RSpec.describe "Validation benchmark" do
     end
 
     puts "\n== create + serialize json (#{ITERATIONS} iterations) =="
-    puts format("%-20s %10s %12s %12s", "name", "time(s)", "us/op", "bytes")
+    puts format("%-30s %10s %12s %12s", "name", "time(s)", "us/op", "bytes")
     results
       .sort_by { |_, data| data[:time] }
       .each do |name, data|
         us_per_op = (data[:time] * 1_000_000.0 / ITERATIONS)
-        puts format("%-20s %10.4f %12.2f %12d", name, data[:time], us_per_op, data[:mem])
+        puts format("%-30s %10.4f %12.2f %12d", name, data[:time], us_per_op, data[:mem])
       end
 
     expect(results.keys).to match_array(targets.keys)
@@ -604,6 +719,33 @@ RSpec.describe "Validation benchmark" do
             details: ActiveModelPlainMessageDetails.new(messages: ["ok"])
           )
         end
+      },
+      active_record: -> {
+        run_validations(ITERATIONS) do
+          ActiveRecordMessage.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: { messages: ["ok"] }
+          )
+        end
+      },
+      strong_parameters: -> {
+        run_validations(ITERATIONS) do
+          ActionController::Parameters.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: { messages: ["ok"] }
+          ).permit(:error, :message, details: { messages: [] })
+        end
+      },
+      strong_parameters_permit_all: -> {
+        run_validations(ITERATIONS) do
+          ActionController::Parameters.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: { messages: ["ok"] }
+          ).permit!
+        end
       }
     }
 
@@ -640,7 +782,10 @@ RSpec.describe "Validation benchmark" do
       :easytalk,
       :easytalk_plain,
       :activemodel,
-      :activemodel_plain
+      :activemodel_plain,
+      :active_record,
+      :strong_parameters,
+      :strong_parameters_permit_all
     ])
   end
 end
