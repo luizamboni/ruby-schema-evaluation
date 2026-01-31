@@ -80,6 +80,14 @@ RSpec.describe "Validation benchmark" do
     end
   end
 
+  unless defined?(ActiveModelNoEnforcementMessageDetails)
+    ActiveModelNoEnforcementMessageDetails = ActiveModelPlainMessageDetails
+  end
+
+  unless defined?(ActiveModelNoEnforcementMessage)
+    ActiveModelNoEnforcementMessage = ActiveModelPlainMessage
+  end
+
   def measure_memory
     GC.start
     before = ObjectSpace.memsize_of_all
@@ -127,6 +135,12 @@ RSpec.describe "Validation benchmark" do
 
   def rails_params_expect_only(payload)
     strong_parameters_expect_hash(ActionController::Parameters.new(payload))
+  end
+
+  def validates_types_for_rails_params_case?(name)
+    return false if name == :rails_expect || name == :rails_require_permit
+    return false if name == :activemodel_plain || name == :activemodel_no_enforcement
+    true
   end
 
   def strong_parameters_expect_hash(params)
@@ -334,6 +348,27 @@ RSpec.describe "Validation benchmark" do
       end
     }
 
+    results[:activemodel_no_enforcement] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          ActiveModelNoEnforcementMessage.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: ActiveModelNoEnforcementMessageDetails.new(messages: ["ok"])
+          )
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          ActiveModelNoEnforcementMessage.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: ActiveModelNoEnforcementMessageDetails.new(messages: ["ok"])
+          )
+        end
+      end
+    }
+
     results[:active_record] = {
       time: Benchmark.realtime do
         run_validations(ITERATIONS) do
@@ -437,6 +472,7 @@ RSpec.describe "Validation benchmark" do
       :easytalk_plain,
       :activemodel,
       :activemodel_plain,
+      :activemodel_no_enforcement,
       :active_record,
       :strong_parameters,
       :strong_parameters_expect,
@@ -499,6 +535,12 @@ RSpec.describe "Validation benchmark" do
       details: ActiveModelPlainMessageDetails.new(messages: ["ok"])
     )
 
+    activemodel_no_enforcement_instance = ActiveModelNoEnforcementMessage.new(
+      error: "NOT_FOUND",
+      message: "missing",
+      details: ActiveModelNoEnforcementMessageDetails.new(messages: ["ok"])
+    )
+
     active_record_instance = ActiveRecordMessage.new(
       error: "NOT_FOUND",
       message: "missing",
@@ -535,6 +577,7 @@ RSpec.describe "Validation benchmark" do
       easytalk_plain: -> { serialize_value(easytalk_plain_instance) },
       activemodel: -> { serialize_value(activemodel_instance) },
       activemodel_plain: -> { serialize_value(activemodel_plain_instance) },
+      activemodel_no_enforcement: -> { serialize_value(activemodel_no_enforcement_instance) },
       active_record: -> { serialize_value(active_record_instance) },
       strong_parameters: -> { serialize_value(strong_parameters_instance) },
       strong_parameters_expect: -> { serialize_value(strong_parameters_expect_instance) },
@@ -647,6 +690,15 @@ RSpec.describe "Validation benchmark" do
             error: "NOT_FOUND",
             message: "missing",
             details: ActiveModelPlainMessageDetails.new(messages: ["ok"])
+          )
+        )
+      },
+      activemodel_no_enforcement: -> {
+        serialize_value(
+          ActiveModelNoEnforcementMessage.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: ActiveModelNoEnforcementMessageDetails.new(messages: ["ok"])
           )
         )
       },
@@ -801,6 +853,15 @@ RSpec.describe "Validation benchmark" do
           )
         end
       },
+      activemodel_no_enforcement: -> {
+        run_validations(ITERATIONS) do
+          ActiveModelNoEnforcementMessage.new(
+            error: "NOT_FOUND",
+            message: "missing",
+            details: ActiveModelNoEnforcementMessageDetails.new(messages: ["ok"])
+          )
+        end
+      },
       active_record: -> {
         run_validations(ITERATIONS) do
           ActiveRecordMessage.new(
@@ -875,6 +936,7 @@ RSpec.describe "Validation benchmark" do
       :easytalk_plain,
       :activemodel,
       :activemodel_plain,
+      :activemodel_no_enforcement,
       :active_record,
       :strong_parameters,
       :strong_parameters_expect,
@@ -1057,6 +1119,29 @@ RSpec.describe "Validation benchmark" do
       end
     }
 
+    results[:activemodel_no_enforcement] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          params_hash = rails_params_permit_all_hash(payload)
+          ActiveModelNoEnforcementMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: ActiveModelNoEnforcementMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          params_hash = rails_params_permit_all_hash(payload)
+          ActiveModelNoEnforcementMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: ActiveModelNoEnforcementMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      end
+    }
+
     results[:active_record] = {
       time: Benchmark.realtime do
         run_validations(ITERATIONS) do
@@ -1073,12 +1158,13 @@ RSpec.describe "Validation benchmark" do
     }
 
     puts "\n== validation (rails params + permit! + dto, #{ITERATIONS} iterations) =="
-    puts format("%-30s %10s %12s %12s", "name", "time(s)", "us/op", "bytes")
+    puts format("%-30s %10s %12s %12s %14s", "name", "time(s)", "us/op", "bytes", "validates")
     results
       .sort_by { |_, data| data[:time] }
       .each do |name, data|
         us_per_op = (data[:time] * 1_000_000.0 / ITERATIONS)
-        puts format("%-30s %10.4f %12.2f %12d", name, data[:time], us_per_op, data[:mem])
+        validates = validates_types_for_rails_params_case?(name) ? "Yes" : "No"
+        puts format("%-30s %10.4f %12.2f %12d %14s", name, data[:time], us_per_op, data[:mem], validates)
       end
 
     expect(results.keys).to match_array([
@@ -1091,6 +1177,7 @@ RSpec.describe "Validation benchmark" do
       :easytalk_plain,
       :activemodel,
       :activemodel_plain,
+      :activemodel_no_enforcement,
       :active_record
     ])
   end
@@ -1173,6 +1260,16 @@ RSpec.describe "Validation benchmark" do
           )
         end
       },
+      activemodel_no_enforcement: -> {
+        run_validations(ITERATIONS) do
+          params_hash = rails_params_permit_all_hash(payload)
+          ActiveModelNoEnforcementMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: ActiveModelNoEnforcementMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      },
       active_record: -> {
         run_validations(ITERATIONS) do
           params_hash = rails_params_permit_all_hash(payload)
@@ -1215,6 +1312,7 @@ RSpec.describe "Validation benchmark" do
       :easytalk_plain,
       :activemodel,
       :activemodel_plain,
+      :activemodel_no_enforcement,
       :active_record
     ])
   end
@@ -1255,12 +1353,13 @@ RSpec.describe "Validation benchmark" do
     }
 
     puts "\n== validation (rails params, no dto, #{ITERATIONS} iterations) =="
-    puts format("%-30s %10s %12s %12s", "name", "time(s)", "us/op", "bytes")
+    puts format("%-30s %10s %12s %12s %14s", "name", "time(s)", "us/op", "bytes", "validates")
     results
       .sort_by { |_, data| data[:time] }
       .each do |name, data|
         us_per_op = (data[:time] * 1_000_000.0 / ITERATIONS)
-        puts format("%-30s %10.4f %12.2f %12d", name, data[:time], us_per_op, data[:mem])
+        validates = validates_types_for_rails_params_case?(name) ? "Yes" : "No"
+        puts format("%-30s %10.4f %12.2f %12d %14s", name, data[:time], us_per_op, data[:mem], validates)
       end
 
     expect(results.keys).to match_array([:rails_expect, :rails_require_permit])

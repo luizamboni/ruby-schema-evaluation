@@ -79,6 +79,14 @@ RSpec.describe "Validation benchmark (failed cases)" do
     end
   end
 
+  unless defined?(ActiveModelNoEnforcementMessageDetails)
+    ActiveModelNoEnforcementMessageDetails = ActiveModelPlainMessageDetails
+  end
+
+  unless defined?(ActiveModelNoEnforcementMessage)
+    ActiveModelNoEnforcementMessage = ActiveModelPlainMessage
+  end
+
   def measure_memory
     GC.start
     before = ObjectSpace.memsize_of_all
@@ -98,6 +106,29 @@ RSpec.describe "Validation benchmark (failed cases)" do
     yield
   rescue ValidationError
     nil
+  end
+
+  def rails_params_permit_all_hash(payload)
+    params = ActionController::Parameters.new(payload).permit!
+    params.to_h.deep_symbolize_keys
+  end
+
+  def rails_params_require_permit_only(payload)
+    ActionController::Parameters.new({ payload: payload })
+      .require(:payload)
+      .permit(:error, :message, details: { messages: [] })
+      .to_h
+  end
+
+  def rails_params_expect_only(payload)
+    ActionController::Parameters.new(payload)
+      .expect(:error, :message, details: { messages: [] })
+  end
+
+  def validates_types_for_rails_params_case?(name)
+    return false if name == :rails_expect || name == :rails_require_permit
+    return false if name == :activemodel_plain || name == :activemodel_no_enforcement
+    true
   end
 
   def validation_triggered?(name, invalid_payload)
@@ -160,7 +191,7 @@ RSpec.describe "Validation benchmark (failed cases)" do
           SorbetPlainMessage.new(invalid_payload)
         when :easytalk_plain
           EasyTalkPlainMessage.new(invalid_payload)
-        when :activemodel_plain
+        when :activemodel_plain, :activemodel_no_enforcement
           ActiveModelPlainMessage.new(invalid_payload)
         end
         false
@@ -230,7 +261,7 @@ RSpec.describe "Validation benchmark (failed cases)" do
           SorbetPlainMessage.new(invalid_payload)
         when :easytalk_plain
           EasyTalkPlainMessage.new(invalid_payload)
-        when :activemodel_plain
+        when :activemodel_plain, :activemodel_no_enforcement
           ActiveModelPlainMessage.new(invalid_payload)
         end
         "-"
@@ -417,6 +448,27 @@ RSpec.describe "Validation benchmark (failed cases)" do
       end
     }
 
+    results[:activemodel_no_enforcement] = {
+      time: Benchmark.realtime do
+        run_validations(FAILED_ITERATIONS) do
+          begin
+            ActiveModelNoEnforcementMessage.new(invalid_payload)
+          rescue StandardError
+            nil
+          end
+        end
+      end,
+      mem: measure_memory do
+        run_validations(FAILED_ITERATIONS) do
+          begin
+            ActiveModelNoEnforcementMessage.new(invalid_payload)
+          rescue StandardError
+            nil
+          end
+        end
+      end
+    }
+
     results[:active_record] = {
       time: Benchmark.realtime do
         run_validations(FAILED_ITERATIONS) do
@@ -519,6 +571,7 @@ RSpec.describe "Validation benchmark (failed cases)" do
       :easytalk_plain,
       :activemodel,
       :activemodel_plain,
+      :activemodel_no_enforcement,
       :active_record,
       :strong_parameters,
       :strong_parameters_expect,
@@ -605,6 +658,15 @@ RSpec.describe "Validation benchmark (failed cases)" do
           end
         end
       },
+      activemodel_no_enforcement: -> {
+        run_validations(FAILED_ITERATIONS) do
+          begin
+            ActiveModelNoEnforcementMessage.new(invalid_payload)
+          rescue StandardError
+            nil
+          end
+        end
+      },
       active_record: -> {
         run_validations(FAILED_ITERATIONS) do
           begin
@@ -684,10 +746,520 @@ RSpec.describe "Validation benchmark (failed cases)" do
       :easytalk_plain,
       :activemodel,
       :activemodel_plain,
+      :activemodel_no_enforcement,
       :active_record,
       :strong_parameters,
       :strong_parameters_expect,
       :strong_parameters_permit_all
     ])
+  end
+
+  it "runs #{FAILED_ITERATIONS} failed validations (Rails params + permit! + DTO)" do
+    results = {}
+    invalid_payload = {
+      error: 123,
+      message: nil,
+      details: { messages: [1] }
+    }
+
+    results[:dry_validation] = {
+      time: Benchmark.realtime do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          DryValidataionMessage.new.(payload)
+        end
+      end,
+      mem: measure_memory do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          DryValidataionMessage.new.(payload)
+        end
+      end
+    }
+
+    results[:dry_struct] = {
+      time: Benchmark.realtime do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          capture_validation_errors { DryStructMessage.new(payload) }
+        end
+      end,
+      mem: measure_memory do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          capture_validation_errors { DryStructMessage.new(payload) }
+        end
+      end
+    }
+
+    results[:dry_struct_plain] = {
+      time: Benchmark.realtime do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            DryStructPlainMessage.new(payload)
+          rescue StandardError
+            nil
+          end
+        end
+      end,
+      mem: measure_memory do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            DryStructPlainMessage.new(payload)
+          rescue StandardError
+            nil
+          end
+        end
+      end
+    }
+
+    results[:sorbet_struct] = {
+      time: Benchmark.realtime do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          capture_validation_errors { SorbetStructMessage.new(payload) }
+        end
+      end,
+      mem: measure_memory do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          capture_validation_errors { SorbetStructMessage.new(payload) }
+        end
+      end
+    }
+
+    results[:sorbet_struct_plain] = {
+      time: Benchmark.realtime do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            SorbetPlainMessage.new(payload)
+          rescue StandardError
+            nil
+          end
+        end
+      end,
+      mem: measure_memory do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            SorbetPlainMessage.new(payload)
+          rescue StandardError
+            nil
+          end
+        end
+      end
+    }
+
+    results[:easytalk] = {
+      time: Benchmark.realtime do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          capture_validation_errors { EasyTalkMessage.new(payload) }
+        end
+      end,
+      mem: measure_memory do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          capture_validation_errors { EasyTalkMessage.new(payload) }
+        end
+      end
+    }
+
+    results[:easytalk_plain] = {
+      time: Benchmark.realtime do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            EasyTalkPlainMessage.new(payload)
+          rescue StandardError
+            nil
+          end
+        end
+      end,
+      mem: measure_memory do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            EasyTalkPlainMessage.new(payload)
+          rescue StandardError
+            nil
+          end
+        end
+      end
+    }
+
+    results[:activemodel] = {
+      time: Benchmark.realtime do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            ActiveModelMessage.new(payload)
+          rescue ArgumentError, ActiveModel::ValidationError
+            nil
+          end
+        end
+      end,
+      mem: measure_memory do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            ActiveModelMessage.new(payload)
+          rescue ArgumentError, ActiveModel::ValidationError
+            nil
+          end
+        end
+      end
+    }
+
+    results[:activemodel_plain] = {
+      time: Benchmark.realtime do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            ActiveModelPlainMessage.new(payload)
+          rescue StandardError
+            nil
+          end
+        end
+      end,
+      mem: measure_memory do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            ActiveModelPlainMessage.new(payload)
+          rescue StandardError
+            nil
+          end
+        end
+      end
+    }
+
+    results[:activemodel_no_enforcement] = {
+      time: Benchmark.realtime do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            ActiveModelNoEnforcementMessage.new(payload)
+          rescue StandardError
+            nil
+          end
+        end
+      end,
+      mem: measure_memory do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            ActiveModelNoEnforcementMessage.new(payload)
+          rescue StandardError
+            nil
+          end
+        end
+      end
+    }
+
+    results[:active_record] = {
+      time: Benchmark.realtime do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            ActiveRecordMessage.new(payload)
+          rescue ActiveRecord::RecordInvalid
+            nil
+          end
+        end
+      end,
+      mem: measure_memory do
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            ActiveRecordMessage.new(payload)
+          rescue ActiveRecord::RecordInvalid
+            nil
+          end
+        end
+      end
+    }
+
+    puts "\n== failed validation (rails params + permit! + dto, #{FAILED_ITERATIONS} iterations) =="
+    puts format("%-30s %10s %12s %12s %14s", "name", "time(s)", "us/op", "bytes", "validates")
+    results
+      .sort_by { |_, data| data[:time] }
+      .each do |name, data|
+        us_per_op = (data[:time] * 1_000_000.0 / FAILED_ITERATIONS)
+        validates = validates_types_for_rails_params_case?(name) ? "Yes" : "No"
+        puts format("%-30s %10.4f %12.2f %12d %14s", name, data[:time], us_per_op, data[:mem], validates)
+      end
+
+    expect(results.keys).to match_array([
+      :dry_validation,
+      :dry_struct,
+      :dry_struct_plain,
+      :sorbet_struct,
+      :sorbet_struct_plain,
+      :easytalk,
+      :easytalk_plain,
+      :activemodel,
+      :activemodel_plain,
+      :activemodel_no_enforcement,
+      :active_record
+    ])
+  end
+
+  it "profiles allocations (Rails params + permit! + DTO, #{FAILED_ITERATIONS} iterations)" do
+    invalid_payload = {
+      error: 123,
+      message: nil,
+      details: { messages: [1] }
+    }
+
+    profiles = {
+      dry_validation: -> {
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          DryValidataionMessage.new.(payload)
+        end
+      },
+      dry_struct: -> {
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          capture_validation_errors { DryStructMessage.new(payload) }
+        end
+      },
+      dry_struct_plain: -> {
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            DryStructPlainMessage.new(payload)
+          rescue StandardError
+            nil
+          end
+        end
+      },
+      sorbet_struct: -> {
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          capture_validation_errors { SorbetStructMessage.new(payload) }
+        end
+      },
+      sorbet_struct_plain: -> {
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            SorbetPlainMessage.new(payload)
+          rescue StandardError
+            nil
+          end
+        end
+      },
+      easytalk: -> {
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          capture_validation_errors { EasyTalkMessage.new(payload) }
+        end
+      },
+      easytalk_plain: -> {
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            EasyTalkPlainMessage.new(payload)
+          rescue StandardError
+            nil
+          end
+        end
+      },
+      activemodel: -> {
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            ActiveModelMessage.new(payload)
+          rescue ArgumentError, ActiveModel::ValidationError
+            nil
+          end
+        end
+      },
+      activemodel_plain: -> {
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            ActiveModelPlainMessage.new(payload)
+          rescue StandardError
+            nil
+          end
+        end
+      },
+      activemodel_no_enforcement: -> {
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            ActiveModelNoEnforcementMessage.new(payload)
+          rescue StandardError
+            nil
+          end
+        end
+      },
+      active_record: -> {
+        run_validations(FAILED_ITERATIONS) do
+          payload = rails_params_permit_all_hash(invalid_payload)
+          begin
+            ActiveRecordMessage.new(payload)
+          rescue ActiveRecord::RecordInvalid
+            nil
+          end
+        end
+      }
+    }
+
+    profile_reports = profiles.transform_values do |fn|
+      MemoryProfiler.report { fn.call }
+    end
+
+    profile_reports
+      .sort_by do |_, report|
+        if report.respond_to?(:total_allocated_memsize)
+          report.total_allocated_memsize
+        elsif report.respond_to?(:total_allocated)
+          report.total_allocated
+        else
+          Float::INFINITY
+        end
+      end
+      .each do |name, report|
+        puts "\n== #{name} (rails params + permit! + dto, failed, #{FAILED_ITERATIONS} iterations) =="
+        report.pretty_print(
+          to_file: nil,
+          scale_bytes: true,
+          normalize_paths: true,
+          detailed_report: false
+        )
+      end
+
+    expect(profiles.keys).to match_array([
+      :dry_validation,
+      :dry_struct,
+      :dry_struct_plain,
+      :sorbet_struct,
+      :sorbet_struct_plain,
+      :easytalk,
+      :easytalk_plain,
+      :activemodel,
+      :activemodel_plain,
+      :activemodel_no_enforcement,
+      :active_record
+    ])
+  end
+
+  it "runs #{FAILED_ITERATIONS} failed validations (Rails params, no DTO)" do
+    results = {}
+    invalid_payload = {
+      error: 123,
+      message: nil,
+      details: { messages: [1] }
+    }
+
+    results[:rails_expect] = {
+      time: Benchmark.realtime do
+        run_validations(FAILED_ITERATIONS) do
+          begin
+            rails_params_expect_only(invalid_payload)
+          rescue ActionController::ParameterMissing
+            nil
+          end
+        end
+      end,
+      mem: measure_memory do
+        run_validations(FAILED_ITERATIONS) do
+          begin
+            rails_params_expect_only(invalid_payload)
+          rescue ActionController::ParameterMissing
+            nil
+          end
+        end
+      end
+    }
+
+    results[:rails_require_permit] = {
+      time: Benchmark.realtime do
+        run_validations(FAILED_ITERATIONS) do
+          begin
+            rails_params_require_permit_only(invalid_payload)
+          rescue ActionController::ParameterMissing
+            nil
+          end
+        end
+      end,
+      mem: measure_memory do
+        run_validations(FAILED_ITERATIONS) do
+          begin
+            rails_params_require_permit_only(invalid_payload)
+          rescue ActionController::ParameterMissing
+            nil
+          end
+        end
+      end
+    }
+
+    puts "\n== failed validation (rails params, no dto, #{FAILED_ITERATIONS} iterations) =="
+    puts format("%-30s %10s %12s %12s %14s", "name", "time(s)", "us/op", "bytes", "validates")
+    results
+      .sort_by { |_, data| data[:time] }
+      .each do |name, data|
+        us_per_op = (data[:time] * 1_000_000.0 / FAILED_ITERATIONS)
+        validates = validates_types_for_rails_params_case?(name) ? "Yes" : "No"
+        puts format("%-30s %10.4f %12.2f %12d %14s", name, data[:time], us_per_op, data[:mem], validates)
+      end
+
+    expect(results.keys).to match_array([:rails_expect, :rails_require_permit])
+  end
+
+  it "profiles allocations (Rails params, no DTO, #{FAILED_ITERATIONS} iterations)" do
+    invalid_payload = {
+      error: 123,
+      message: nil,
+      details: { messages: [1] }
+    }
+
+    reports = {
+      rails_expect: MemoryProfiler.report do
+        run_validations(FAILED_ITERATIONS) do
+          begin
+            rails_params_expect_only(invalid_payload)
+          rescue ActionController::ParameterMissing
+            nil
+          end
+        end
+      end,
+      rails_require_permit: MemoryProfiler.report do
+        run_validations(FAILED_ITERATIONS) do
+          begin
+            rails_params_require_permit_only(invalid_payload)
+          rescue ActionController::ParameterMissing
+            nil
+          end
+        end
+      end
+    }
+
+    reports
+      .sort_by do |_, report|
+        if report.respond_to?(:total_allocated_memsize)
+          report.total_allocated_memsize
+        elsif report.respond_to?(:total_allocated)
+          report.total_allocated
+        else
+          Float::INFINITY
+        end
+      end
+      .each do |name, report|
+        puts "\n== #{name} (rails params, no dto, failed, #{FAILED_ITERATIONS} iterations) =="
+        report.pretty_print(
+          to_file: nil,
+          scale_bytes: true,
+          normalize_paths: true,
+          detailed_report: false
+        )
+      end
   end
 end
