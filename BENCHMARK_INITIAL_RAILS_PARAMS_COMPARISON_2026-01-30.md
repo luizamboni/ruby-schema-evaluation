@@ -16,8 +16,8 @@ Iterations: 10_000
 | sorbet_struct | 0.2113 | 21.13 | 0 | rails params + permit! + dto |
 | dry_struct | 0.2596 | 25.96 | 0 | rails params + permit! + dto |
 | easytalk | 0.2792 | 27.92 | 0 | rails params + permit! + dto |
-| rails params + expect | 0.3036 | 30.36 | 40 | no DTO |
-| rails params + require + permit | 0.3182 | 31.82 | 0 | no DTO |
+| rails params + expect | 0.3086 | 30.86 | 0 | no DTO |
+| rails params + require + permit | 0.3130 | 31.30 | 0 | no DTO |
 | activemodel | 0.3282 | 32.82 | 0 | rails params + permit! + dto |
 | active_record | 0.3533 | 35.33 | 1560 | rails params + permit! + dto |
 | dry_validation | 0.4566 | 45.66 | 160 | rails params + permit! + dto |

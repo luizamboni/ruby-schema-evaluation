@@ -1220,60 +1220,7 @@ RSpec.describe "Validation benchmark" do
   end
 
 
-  it "runs #{ITERATIONS} validations (Rails params + require + permit, no DTO)" do
-    results = {}
-    payload = {
-      error: "NOT_FOUND",
-      message: "missing",
-      details: { messages: ["ok"] }
-    }
-
-    results[:rails_require_permit] = {
-      time: Benchmark.realtime do
-        run_validations(ITERATIONS) do
-          rails_params_require_permit_only(payload)
-        end
-      end,
-      mem: measure_memory do
-        run_validations(ITERATIONS) do
-          rails_params_require_permit_only(payload)
-        end
-      end
-    }
-
-    puts "\n== validation (rails params + require + permit, #{ITERATIONS} iterations) =="
-    puts format("%-30s %10s %12s %12s", "name", "time(s)", "us/op", "bytes")
-    results.each do |name, data|
-      us_per_op = (data[:time] * 1_000_000.0 / ITERATIONS)
-      puts format("%-30s %10.4f %12.2f %12d", name, data[:time], us_per_op, data[:mem])
-    end
-
-    expect(results.keys).to match_array([:rails_require_permit])
-  end
-
-  it "profiles allocations (Rails params + require + permit, #{ITERATIONS} iterations)" do
-    payload = {
-      error: "NOT_FOUND",
-      message: "missing",
-      details: { messages: ["ok"] }
-    }
-
-    report = MemoryProfiler.report do
-      run_validations(ITERATIONS) do
-        rails_params_require_permit_only(payload)
-      end
-    end
-
-    puts "\n== rails_require_permit (rails params + require + permit, #{ITERATIONS} iterations) =="
-    report.pretty_print(
-      to_file: nil,
-      scale_bytes: true,
-      normalize_paths: true,
-      detailed_report: false
-    )
-  end
-
-  it "runs #{ITERATIONS} validations (Rails params + expect, no DTO)" do
+  it "runs #{ITERATIONS} validations (Rails params, no DTO)" do
     results = {}
     payload = {
       error: "NOT_FOUND",
@@ -1294,35 +1241,65 @@ RSpec.describe "Validation benchmark" do
       end
     }
 
-    puts "\n== validation (rails params + expect, #{ITERATIONS} iterations) =="
-    puts format("%-30s %10s %12s %12s", "name", "time(s)", "us/op", "bytes")
-    results.each do |name, data|
-      us_per_op = (data[:time] * 1_000_000.0 / ITERATIONS)
-      puts format("%-30s %10.4f %12.2f %12d", name, data[:time], us_per_op, data[:mem])
-    end
+    results[:rails_require_permit] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          rails_params_require_permit_only(payload)
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          rails_params_require_permit_only(payload)
+        end
+      end
+    }
 
-    expect(results.keys).to match_array([:rails_expect])
+    puts "\n== validation (rails params, no dto, #{ITERATIONS} iterations) =="
+    puts format("%-30s %10s %12s %12s", "name", "time(s)", "us/op", "bytes")
+    results
+      .sort_by { |_, data| data[:time] }
+      .each do |name, data|
+        us_per_op = (data[:time] * 1_000_000.0 / ITERATIONS)
+        puts format("%-30s %10.4f %12.2f %12d", name, data[:time], us_per_op, data[:mem])
+      end
+
+    expect(results.keys).to match_array([:rails_expect, :rails_require_permit])
   end
 
-  it "profiles allocations (Rails params + expect, #{ITERATIONS} iterations)" do
+  it "profiles allocations (Rails params, no DTO, #{ITERATIONS} iterations)" do
     payload = {
       error: "NOT_FOUND",
       message: "missing",
       details: { messages: ["ok"] }
     }
 
-    report = MemoryProfiler.report do
-      run_validations(ITERATIONS) do
-        rails_params_expect_only(payload)
+    reports = {
+      rails_expect: MemoryProfiler.report do
+        run_validations(ITERATIONS) { rails_params_expect_only(payload) }
+      end,
+      rails_require_permit: MemoryProfiler.report do
+        run_validations(ITERATIONS) { rails_params_require_permit_only(payload) }
       end
-    end
+    }
 
-    puts "\n== rails_expect (rails params + expect, #{ITERATIONS} iterations) =="
-    report.pretty_print(
-      to_file: nil,
-      scale_bytes: true,
-      normalize_paths: true,
-      detailed_report: false
-    )
+    reports
+      .sort_by do |_, report|
+        if report.respond_to?(:total_allocated_memsize)
+          report.total_allocated_memsize
+        elsif report.respond_to?(:total_allocated)
+          report.total_allocated
+        else
+          Float::INFINITY
+        end
+      end
+      .each do |name, report|
+        puts "\n== #{name} (rails params, no dto, #{ITERATIONS} iterations) =="
+        report.pretty_print(
+          to_file: nil,
+          scale_bytes: true,
+          normalize_paths: true,
+          detailed_report: false
+        )
+      end
   end
 end
