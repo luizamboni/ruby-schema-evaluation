@@ -29,6 +29,16 @@ This repo is a comparative study of Ruby DTO/schema approaches under different v
 
 If you are evaluating Ruby schema/DTO libraries, comparing validation ergonomics, or tuning validation performance, this repo is for you.
 
+
+## Plain vs extended DTOs
+The repo defines two variants per library:
+- Plain DTOs: baseline library behavior with minimal additions.
+- Extended DTOs: wrap the same schema with custom enforcers for stricter validation, richer errors, nested initializations, and some performance tweaks.
+
+Where to find them:
+- Plain classes live in `spec/support/messages/plain_messages.rb`.
+- Extended classes live in `spec/support/messages/dry_struct_message.rb`, `spec/support/messages/sorbet_struct_message.rb`, `spec/support/messages/easy_talk_message.rb`, and `spec/support/messages/active_model_message.rb`.
+
 ## Unexpected fields (DTO input)
 Behavior when callers pass extra properties that are not defined in the DTO schema (top-level or nested):
 
@@ -40,31 +50,6 @@ Behavior when callers pass extra properties that are not defined in the DTO sche
 | EasyTalk (SchemaEnforcer) | raises `ActiveModel::UnknownAttributeError` | raises `ActiveModel::UnknownAttributeError` |
 | ActiveModel | raises `ActiveModel::UnknownAttributeError` | raises `ActiveModel::UnknownAttributeError` |
 
-## Goals
-- Compare validation behavior across approaches (happy path and failure path).
-- Measure performance (time) and memory allocations.
-- Explore optimizations (e.g., schema caching, lazy error creation, fast‑path validations).
-- Document trade‑offs between strictness, ergonomics, and runtime cost.
-
-## What’s inside
-- Multiple DTO implementations in `spec/support/messages/` (Dry::Struct, Sorbet, EasyTalk, ActiveModel, Dry::Validation).
-- Benchmarks and comparison specs in `spec/`.
-- Baseline benchmark results in `BENCHMARK_INITIAL.md`.
-- Follow‑up diff reports (`BENCHMARK_DIFF*.md`, `BENCHMARK_FAILED*.md`) showing the impact of specific optimizations.
-
-## Plain vs extended DTOs
-The repo defines two variants per library:
-- Plain DTOs: baseline library behavior with minimal additions.
-- Extended DTOs: wrap the same schema with custom enforcers for stricter validation, richer errors, and some performance tweaks.
-
-Where to find them:
-- Plain classes live in `spec/support/messages/plain_messages.rb`.
-- Extended classes live in `spec/support/messages/dry_struct_message.rb`, `spec/support/messages/sorbet_struct_message.rb`, `spec/support/messages/easy_talk_message.rb`, and `spec/support/messages/active_model_message.rb`.
-
-What changes in the extended versions (high level):
-- Custom validation flow that raises `ValidationError` with structured error hashes.
-- Explicit type checking/coercion on nested objects and arrays.
-- Optional fast-path validation for arrays and cached schema metadata in some enforcers.
 
 ## Quick start
 Requirements:
@@ -134,6 +119,7 @@ end
 Request params + deep_symbolize_keys + DTO:
 ```ruby
 def create
+  # Raw body params; symbolize keys for DTO initialization.
   raw = request.request_parameters.deep_symbolize_keys
   dto = EasyTalkMessage.new(raw)
   render json: dto
@@ -143,6 +129,7 @@ end
 Unsafe hash + DTO:
 ```ruby
 def create
+  # Unfiltered params; acceptable here because DTO enforces schema
   raw = params.to_unsafe_h
   dto = ActiveModelMessage.new(raw)
   render json: dto
@@ -155,8 +142,3 @@ This benchmark measures the cost of reading attributes from DTO instances across
 | Date | Commit | Category | What it measures | Report |
 | --- | --- | --- | --- | --- |
 | 2026-02-01 | 63f31ab | Attribute access | Reader cost across DTOs | [Attribute access (2026-02-01)](BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md) |
-
-## Adding a new DTO/validator
-1. Add the DTO implementation in `spec/support/messages/`.
-2. Add or extend specs in `spec/` to exercise both happy and failure paths.
-3. Run the relevant benchmarks and record outputs in a new `BENCHMARK_*.md` file.
