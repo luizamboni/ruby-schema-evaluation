@@ -1,6 +1,11 @@
 # Ruby Schema Evaluation
 
-## Example behavior
+This repo is a comparative study of Ruby DTO/schema approaches under different validation strategies and error-handling styles. It benchmarks correctness behavior, performance, and memory usage across multiple libraries and custom enforcers.
+
+If you are evaluating Ruby schema/DTO libraries, comparing validation ergonomics, or tuning validation performance, this repo is for you.
+
+
+## Intended behavior and API
 ```ruby
 # A valid payload should build cleanly
 payload = {
@@ -25,17 +30,12 @@ rescue ValidationError => e
 end
 ```
 
-This repo is a comparative study of Ruby DTO/schema approaches under different validation strategies and error-handling styles. It benchmarks correctness behavior, performance, and memory usage across multiple libraries and custom enforcers.
-
-If you are evaluating Ruby schema/DTO libraries, comparing validation ergonomics, or tuning validation performance, this repo is for you.
-
-
 ## Plain vs extended DTOs
 The repo defines two variants per library:
-- Plain DTOs: baseline library behavior with minimal additions.
-- Extended DTOs: wrap the same schema with custom enforcers for stricter validation, richer errors, nested initializations, and some performance tweaks.
+**Plain DTOs**: baseline library behavior with minimal additions.
+**Extended DTOs**: wrap the same schema with custom enforcers for stricter validation, richer errors, nested initializations, and some performance tweaks.
 
-## Unexpected fields (DTO input)
+## How some DTO threats unexpected fields in its plain version
 Behavior when callers pass extra properties that are not defined in the DTO schema (top-level or nested):
 
 | DTO / Validator | Top-level unknowns | Nested unknowns |
@@ -49,8 +49,9 @@ Behavior when callers pass extra properties that are not defined in the DTO sche
 
 ## Quick start
 Requirements:
-- Ruby (see `.ruby-version` if present)
-- Bundler
+```
+ruby 3.3.0
+```
 
 Install and run:
 ```
@@ -64,12 +65,11 @@ bundle exec rspec
 ```
 
 ## Benchmarks
-- Happy‑path: `bundle exec rspec spec/benchmark_spec.rb`
-- Failure‑path: `bundle exec rspec spec/benchmark_failed_spec.rb`
+This benchmark measures the cost of initializate DTO classes,
+with its validations when all goes happy and when not.
 
-Results are captured in the `BENCHMARK_*.md` files.
 
-### Benchmark index
+### DTO Benchmarks
 | Date | Commit | Category | What it measures | Report |
 | --- | --- | --- | --- | --- |
 | 2026-01-25 | af433e4 | Baseline happy-path | Construct + validate + serialize costs | [Initial](BENCHMARK_INITIAL.md) |
@@ -82,6 +82,14 @@ Results are captured in the `BENCHMARK_*.md` files.
 | 2026-01-25 | fd8f402 | Failure diff (EasyTalk fast-path) | Change vs failed baseline | [Failed diff (EasyTalk fast-path)](BENCHMARK_FAILED_DIFF_FASTPATH_EASYTALK.md) |
 | 2026-01-25 | fd8f402 | Failure diff (fast array validation) | Change vs failed baseline | [Failed diff (fast array validation)](BENCHMARK_FAILED_DIFF_FAST_ARRAY_VALIDATION.md) |
 | 2026-02-01 | 63f31ab | Attribute access | Reader cost per DTO | [Attribute access (2026-02-01)](BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md) |
+
+## Attribute access benchmark
+This benchmark measures the cost of reading attributes from DTO instances across implementations.
+
+| Date | Commit | Category | What it measures | Report |
+| --- | --- | --- | --- | --- |
+| 2026-02-01 | 63f31ab | Attribute access | Reader cost across DTOs | [Attribute access (2026-02-01)](BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md) |
+
 
 ## Rails params benchmarks
 These benchmarks simulate the full Rails controller parameter pipeline before DTO construction.
@@ -131,10 +139,3 @@ def create
   render json: dto
 end
 ```
-
-## Attribute access benchmark
-This benchmark measures the cost of reading attributes from DTO instances across implementations.
-
-| Date | Commit | Category | What it measures | Report |
-| --- | --- | --- | --- | --- |
-| 2026-02-01 | 63f31ab | Attribute access | Reader cost across DTOs | [Attribute access (2026-02-01)](BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md) |
