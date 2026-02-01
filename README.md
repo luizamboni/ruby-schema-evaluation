@@ -150,13 +150,6 @@ def create
 end
 ```
 
-## Interpreting benchmark results
-- Time results can vary across runs; compare trends instead of single-run absolutes.
-- Allocations often correlate more tightly with validation overhead than raw time.
-- The failure-path benchmarks include error construction cost, which can dominate total time.
-- When comparing diffs, focus on relative change vs the corresponding baseline.
-- The Rails params comparison reports include the full chain of parameter handling (e.g., `request_parameters` + `deep_symbolize_keys`, `permit!`, `to_unsafe_h`, and `require/permit` or `expect`) before DTO construction.
-
 ## Adding a new DTO/validator
 1. Add the DTO implementation in `spec/support/messages/`.
 2. Add or extend specs in `spec/` to exercise both happy and failure paths.
