@@ -7,6 +7,7 @@ require_relative "support/messages/sorbet_struct_message"
 require_relative "support/messages/easy_talk_message"
 require_relative "support/messages/active_model_message"
 require_relative "support/messages/active_record_message"
+require_relative "support/messages/plain_messages"
 
 ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: ":memory:")
 ActiveRecord::Schema.define do
