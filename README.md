@@ -100,6 +100,7 @@ Results are captured in the `BENCHMARK_*.md` files.
 | [BENCHMARK_FAILED_DIFF_LIGHTWEIGHT_ERRORS.md](BENCHMARK_FAILED_DIFF_LIGHTWEIGHT_ERRORS.md) | Failure-path diff: lightweight error objects. |
 | [BENCHMARK_FAILED_DIFF_FASTPATH_EASYTALK.md](BENCHMARK_FAILED_DIFF_FASTPATH_EASYTALK.md) | Failure-path diff: EasyTalk fast-path. |
 | [BENCHMARK_FAILED_DIFF_FAST_ARRAY_VALIDATION.md](BENCHMARK_FAILED_DIFF_FAST_ARRAY_VALIDATION.md) | Failure-path diff: faster array validation. |
+| [BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md](BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md) | Attribute access benchmark (reader cost across DTOs). |
 | [BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-01-30.md](BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-01-30.md) | Rails params pipeline comparison (permit!/require/expect + DTO). |
 | [BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md](BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md) | Rails params pipeline comparison including `request_parameters` and `to_unsafe_h`. |
 
@@ -149,6 +150,12 @@ def create
   render json: dto
 end
 ```
+
+## Attribute access benchmark
+This benchmark measures the cost of reading attributes from DTO instances across implementations.
+
+Report:
+- `BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md`
 
 ## Adding a new DTO/validator
 1. Add the DTO implementation in `spec/support/messages/`.
