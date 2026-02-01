@@ -108,9 +108,9 @@ These benchmarks simulate the full Rails controller parameter pipeline before DT
 ### Pipelines covered
 | Pipeline | Example chain | Report |
 | --- | --- | --- |
-| Strong Parameters + DTO | `require/permit` or `expect` + `to_h` + DTO | `BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-01-30.md` |
-| Request params + DTO | `request_parameters` + `deep_symbolize_keys` + DTO | `BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md` |
-| Unsafe hash + DTO | `to_unsafe_h` + DTO | `BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md` |
+| Strong Parameters + DTO | `require/permit` or `expect` + `to_h` + DTO | [BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-01-30.md](BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-01-30.md) |
+| Request params + DTO | `request_parameters` + `deep_symbolize_keys` + DTO | [BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md](BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md) |
+| Unsafe hash + DTO | `to_unsafe_h` + DTO | [BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md](BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md) |
 
 ### Controller-style examples
 Strong Parameters + DTO (permit!/require):
@@ -152,8 +152,9 @@ end
 ## Attribute access benchmark
 This benchmark measures the cost of reading attributes from DTO instances across implementations.
 
-Report:
-- `BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md`
+| Report | Purpose |
+| --- | --- |
+| [BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md](BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md) | Attribute access benchmark (reader cost across DTOs). |
 
 ## Adding a new DTO/validator
 1. Add the DTO implementation in `spec/support/messages/`.
