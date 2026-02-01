@@ -9,30 +9,30 @@ Iterations: 10_000
 ## Validation
 | dto | time(s) | us/op | bytes | validates types | comments |
 | --- | --- | --- | --- | --- | --- |
-| sorbet_struct_plain_unsafe_h | 0.1095 | 10.95 | 640 | Yes | rails params + to_unsafe_h + dto |
-| dry_struct_plain_unsafe_h | 0.1222 | 12.22 | 384 | Yes | rails params + to_unsafe_h + dto |
-| activemodel_plain_unsafe_h | 0.1380 | 13.80 | 384 | Yes | rails params + to_unsafe_h + dto |
-| activemodel_no_enforcement_unsafe_h | 0.1386 | 13.86 | 384 | Yes | rails params + to_unsafe_h + dto |
-| easytalk_plain_unsafe_h | 0.1517 | 15.17 | 640 | Yes | rails params + to_unsafe_h + dto |
-| sorbet_struct_unsafe_h | 0.1564 | 15.64 | 192 | Yes | rails params + to_unsafe_h + dto |
-| sorbet_struct_plain | 0.1668 | 16.68 | 0 | Yes | rails params + permit! + dto |
-| dry_struct_unsafe_h | 0.1735 | 17.35 | 192 | Yes | rails params + to_unsafe_h + dto |
-| dry_struct_plain | 0.1791 | 17.91 | 0 | Yes | rails params + permit! + dto |
-| activemodel_plain | 0.1948 | 19.48 | 0 | No | rails params + permit! + dto |
-| activemodel_no_enforcement | 0.1951 | 19.51 | 0 | No | rails params + permit! + dto |
-| easytalk_plain | 0.2088 | 20.88 | 0 | Yes | rails params + permit! + dto |
-| sorbet_struct | 0.2145 | 21.45 | 0 | Yes | rails params + permit! + dto |
-| dry_struct | 0.2304 | 23.04 | 0 | Yes | rails params + permit! + dto |
-| easytalk_unsafe_h | 0.2436 | 24.36 | 192 | Yes | rails params + to_unsafe_h + dto |
-| active_record_unsafe_h | 0.2440 | 24.40 | 192 | Yes | rails params + to_unsafe_h + dto |
-| activemodel_unsafe_h | 0.2665 | 26.65 | 192 | Yes | rails params + to_unsafe_h + dto |
-| easytalk | 0.2748 | 27.48 | 0 | Yes | rails params + permit! + dto |
-| active_record | 0.3070 | 30.70 | 1560 | Yes | rails params + permit! + dto |
-| activemodel | 0.3274 | 32.74 | 0 | Yes | rails params + permit! + dto |
-| dry_validation_unsafe_h | 0.3538 | 35.38 | 1856 | Yes | rails params + to_unsafe_h + dto |
-| dry_validation | 0.4701 | 47.01 | 160 | Yes | rails params + permit! + dto |
-| rails params + require + permit | 0.5020 | 50.20 | 0 | No | no DTO |
-| rails params + expect | 0.5460 | 54.60 | 40 | No | no DTO |
+| sorbet_struct_plain_unsafe_h | 0.1102 | 11.02 | 640 | Yes | rails params + to_unsafe_h + dto |
+| dry_struct_plain_unsafe_h | 0.1241 | 12.41 | 384 | Yes | rails params + to_unsafe_h + dto |
+| activemodel_no_enforcement_unsafe_h | 0.1407 | 14.07 | 384 | No | rails params + to_unsafe_h + dto |
+| activemodel_plain_unsafe_h | 0.1431 | 14.31 | 384 | No | rails params + to_unsafe_h + dto |
+| sorbet_struct_unsafe_h | 0.1554 | 15.54 | 192 | Yes | rails params + to_unsafe_h + dto |
+| sorbet_struct_plain | 0.1690 | 16.90 | 0 | Yes | rails params + permit! + dto |
+| easytalk_plain_unsafe_h | 0.1733 | 17.33 | 640 | Yes | rails params + to_unsafe_h + dto |
+| dry_struct_unsafe_h | 0.1739 | 17.39 | 192 | Yes | rails params + to_unsafe_h + dto |
+| dry_struct_plain | 0.1846 | 18.46 | 0 | Yes | rails params + permit! + dto |
+| activemodel_plain | 0.1983 | 19.83 | 0 | No | rails params + permit! + dto |
+| activemodel_no_enforcement | 0.2019 | 20.19 | 0 | No | rails params + permit! + dto |
+| sorbet_struct | 0.2107 | 21.07 | 0 | Yes | rails params + permit! + dto |
+| easytalk_plain | 0.2146 | 21.46 | 0 | Yes | rails params + permit! + dto |
+| easytalk_unsafe_h | 0.2206 | 22.06 | 192 | Yes | rails params + to_unsafe_h + dto |
+| dry_struct | 0.2383 | 23.83 | 0 | Yes | rails params + permit! + dto |
+| active_record_unsafe_h | 0.2449 | 24.49 | 192 | Yes | rails params + to_unsafe_h + dto |
+| activemodel_unsafe_h | 0.2646 | 26.46 | 192 | Yes | rails params + to_unsafe_h + dto |
+| easytalk | 0.2839 | 28.39 | 0 | Yes | rails params + permit! + dto |
+| active_record | 0.3087 | 30.87 | 1560 | Yes | rails params + permit! + dto |
+| activemodel | 0.3277 | 32.77 | 0 | Yes | rails params + permit! + dto |
+| dry_validation_unsafe_h | 0.3532 | 35.32 | 2016 | Yes | rails params + to_unsafe_h + dto |
+| dry_validation | 0.4311 | 43.11 | 160 | Yes | rails params + permit! + dto |
+| rails params + expect | 0.5152 | 51.52 | 40 | No | no DTO |
+| rails params + require + permit | 0.5321 | 53.21 | -360 | No | no DTO |
 
 ## MemoryProfiler
 | dto | total allocated | objects | validates types | comments |
@@ -43,7 +43,7 @@ Iterations: 10_000
 | dry_struct_unsafe_h | 32.80 MB | 390000 | Yes | rails params + to_unsafe_h + dto |
 | sorbet_struct_plain | 36.80 MB | 450000 | Yes | rails params + permit! + dto |
 | dry_struct_plain | 37.20 MB | 460000 | Yes | rails params + permit! + dto |
-| easytalk_plain_unsafe_h | 38.40 MB | 430028 | Yes | rails params + to_unsafe_h + dto |
+| easytalk_plain_unsafe_h | 38.40 MB | 430000 | Yes | rails params + to_unsafe_h + dto |
 | activemodel_no_enforcement_unsafe_h | 39.60 MB | 450000 | Yes | rails params + to_unsafe_h + dto |
 | activemodel_plain_unsafe_h | 39.60 MB | 450000 | Yes | rails params + to_unsafe_h + dto |
 | sorbet_struct | 40.40 MB | 590000 | Yes | rails params + permit! + dto |
@@ -52,8 +52,8 @@ Iterations: 10_000
 | dry_struct | 42.80 MB | 570000 | Yes | rails params + permit! + dto |
 | activemodel_unsafe_h | 48.00 MB | 720000 | Yes | rails params + to_unsafe_h + dto |
 | easytalk_plain | 48.40 MB | 610000 | Yes | rails params + permit! + dto |
-| activemodel_plain | 49.60 MB | 630000 | No | rails params + permit! + dto |
 | activemodel_no_enforcement | 49.60 MB | 630000 | No | rails params + permit! + dto |
+| activemodel_plain | 49.60 MB | 630028 | No | rails params + permit! + dto |
 | easytalk | 50.40 MB | 770000 | Yes | rails params + permit! + dto |
 | active_record | 51.20 MB | 690000 | Yes | rails params + permit! + dto |
 | dry_validation_unsafe_h | 55.92 MB | 680000 | Yes | rails params + to_unsafe_h + dto |

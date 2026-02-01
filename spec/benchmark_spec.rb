@@ -144,7 +144,8 @@ RSpec.describe "Validation benchmark" do
 
   def validates_types_for_rails_params_case?(name)
     return false if name == :rails_expect || name == :rails_require_permit
-    return false if name == :activemodel_plain || name == :activemodel_no_enforcement
+    base_name = name.to_s.sub(/_unsafe_h\z/, "").to_sym
+    return false if base_name == :activemodel_plain || base_name == :activemodel_no_enforcement
     true
   end
 
