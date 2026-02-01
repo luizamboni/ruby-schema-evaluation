@@ -89,28 +89,28 @@ bundle exec rspec
 Results are captured in the `BENCHMARK_*.md` files.
 
 ### Benchmark index
-| Category | What it measures | Report |
-| --- | --- | --- |
-| Baseline happy-path | Construct + validate + serialize costs | [BENCHMARK_INITIAL.md](BENCHMARK_INITIAL.md) |
-| Diff (schema cache) | Change vs baseline after memoization | [BENCHMARK_DIFF.md](BENCHMARK_DIFF.md) |
-| Diff (lightweight errors) | Change vs baseline with lightweight errors | [BENCHMARK_DIFF_LIGHTWEIGHT_ERRORS.md](BENCHMARK_DIFF_LIGHTWEIGHT_ERRORS.md) |
-| Diff (EasyTalk fast-path) | Change vs baseline with fast-path | [BENCHMARK_DIFF_FASTPATH_EASYTALK.md](BENCHMARK_DIFF_FASTPATH_EASYTALK.md) |
-| Diff (fast array validation) | Change vs baseline with array fast-path | [BENCHMARK_DIFF_FAST_ARRAY_VALIDATION.md](BENCHMARK_DIFF_FAST_ARRAY_VALIDATION.md) |
-| Baseline failure-path | Invalid payload cost and allocations | [BENCHMARK_FAILED.md](BENCHMARK_FAILED.md) |
-| Failure diff (lightweight errors) | Change vs failed baseline | [BENCHMARK_FAILED_DIFF_LIGHTWEIGHT_ERRORS.md](BENCHMARK_FAILED_DIFF_LIGHTWEIGHT_ERRORS.md) |
-| Failure diff (EasyTalk fast-path) | Change vs failed baseline | [BENCHMARK_FAILED_DIFF_FASTPATH_EASYTALK.md](BENCHMARK_FAILED_DIFF_FASTPATH_EASYTALK.md) |
-| Failure diff (fast array validation) | Change vs failed baseline | [BENCHMARK_FAILED_DIFF_FAST_ARRAY_VALIDATION.md](BENCHMARK_FAILED_DIFF_FAST_ARRAY_VALIDATION.md) |
-| Attribute access | Reader cost per DTO | [BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md](BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md) |
+| Date | Commit | Category | What it measures | Report |
+| --- | --- | --- | --- | --- |
+| 2026-01-25 | af433e4 | Baseline happy-path | Construct + validate + serialize costs | [BENCHMARK_INITIAL.md](BENCHMARK_INITIAL.md) |
+| 2026-01-25 | c2a4c62 | Diff (schema cache) | Change vs baseline after memoization | [BENCHMARK_DIFF.md](BENCHMARK_DIFF.md) |
+| 2026-01-25 | 117120e | Diff (lightweight errors) | Change vs baseline with lightweight errors | [BENCHMARK_DIFF_LIGHTWEIGHT_ERRORS.md](BENCHMARK_DIFF_LIGHTWEIGHT_ERRORS.md) |
+| 2026-01-25 | fd8f402 | Diff (EasyTalk fast-path) | Change vs baseline with fast-path | [BENCHMARK_DIFF_FASTPATH_EASYTALK.md](BENCHMARK_DIFF_FASTPATH_EASYTALK.md) |
+| 2026-01-25 | 3e8f2fb | Diff (fast array validation) | Change vs baseline with array fast-path | [BENCHMARK_DIFF_FAST_ARRAY_VALIDATION.md](BENCHMARK_DIFF_FAST_ARRAY_VALIDATION.md) |
+| 2026-01-25 | 182692d | Baseline failure-path | Invalid payload cost and allocations | [BENCHMARK_FAILED.md](BENCHMARK_FAILED.md) |
+| 2026-01-25 | 117120e | Failure diff (lightweight errors) | Change vs failed baseline | [BENCHMARK_FAILED_DIFF_LIGHTWEIGHT_ERRORS.md](BENCHMARK_FAILED_DIFF_LIGHTWEIGHT_ERRORS.md) |
+| 2026-01-25 | fd8f402 | Failure diff (EasyTalk fast-path) | Change vs failed baseline | [BENCHMARK_FAILED_DIFF_FASTPATH_EASYTALK.md](BENCHMARK_FAILED_DIFF_FASTPATH_EASYTALK.md) |
+| 2026-01-25 | fd8f402 | Failure diff (fast array validation) | Change vs failed baseline | [BENCHMARK_FAILED_DIFF_FAST_ARRAY_VALIDATION.md](BENCHMARK_FAILED_DIFF_FAST_ARRAY_VALIDATION.md) |
+| 2026-02-01 | 63f31ab | Attribute access | Reader cost per DTO | [BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md](BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md) |
 
 ## Rails params benchmarks
 These benchmarks simulate the full Rails controller parameter pipeline before DTO construction.
 
 ### Pipelines covered
-| Category | What it measures | Report |
-| --- | --- | --- |
-| Strong Parameters + DTO | `require/permit` or `expect` + DTO | [BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-01-30.md](BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-01-30.md) |
-| Request params + DTO | `request_parameters` + `deep_symbolize_keys` + DTO | [BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md](BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md) |
-| Unsafe hash + DTO | `to_unsafe_h` + DTO | [BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md](BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md) |
+| Date | Commit | Category | What it measures | Report |
+| --- | --- | --- | --- | --- |
+| 2026-01-31 | f5c2f11 | Strong Parameters + DTO | `require/permit` or `expect` + DTO | [BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-01-30.md](BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-01-30.md) |
+| 2026-02-01 | acaed13 | Request params + DTO | `request_parameters` + `deep_symbolize_keys` + DTO | [BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md](BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md) |
+| 2026-02-01 | acaed13 | Unsafe hash + DTO | `to_unsafe_h` + DTO | [BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md](BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md) |
 
 ### Controller-style examples
 Strong Parameters + DTO (permit!/require):
@@ -152,9 +152,9 @@ end
 ## Attribute access benchmark
 This benchmark measures the cost of reading attributes from DTO instances across implementations.
 
-| Category | What it measures | Report |
-| --- | --- | --- |
-| Attribute access | Reader cost across DTOs | [BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md](BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md) |
+| Date | Commit | Category | What it measures | Report |
+| --- | --- | --- | --- | --- |
+| 2026-02-01 | 63f31ab | Attribute access | Reader cost across DTOs | [BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md](BENCHMARK_ATTRIBUTE_ACCESS_2026-02-01.md) |
 
 ## Adding a new DTO/validator
 1. Add the DTO implementation in `spec/support/messages/`.
