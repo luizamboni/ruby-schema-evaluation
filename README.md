@@ -25,7 +25,9 @@ rescue ValidationError => e
 end
 ```
 
-This repo is a comparative study of Ruby DTO/schema approaches under different validation strategies and error‑handling styles. It benchmarks correctness behavior, performance, and memory usage across multiple libraries and custom enforcers.
+This repo is a comparative study of Ruby DTO/schema approaches under different validation strategies and error-handling styles. It benchmarks correctness behavior, performance, and memory usage across multiple libraries and custom enforcers.
+
+If you are evaluating Ruby schema/DTO libraries, comparing validation ergonomics, or tuning validation performance, this repo is for you.
 
 ## Unexpected fields (DTO input)
 Behavior when callers pass extra properties that are not defined in the DTO schema (top-level or nested):
@@ -50,6 +52,31 @@ Behavior when callers pass extra properties that are not defined in the DTO sche
 - Baseline benchmark results in `BENCHMARK_INITIAL.md`.
 - Follow‑up diff reports (`BENCHMARK_DIFF*.md`, `BENCHMARK_FAILED*.md`) showing the impact of specific optimizations.
 
+## Plain vs extended DTOs
+The repo defines two variants per library:
+- Plain DTOs: baseline library behavior with minimal additions.
+- Extended DTOs: wrap the same schema with custom enforcers for stricter validation, richer errors, and some performance tweaks.
+
+Where to find them:
+- Plain classes live in `spec/support/messages/plain_messages.rb`.
+- Extended classes live in `spec/support/messages/dry_struct_message.rb`, `spec/support/messages/sorbet_struct_message.rb`, `spec/support/messages/easy_talk_message.rb`, and `spec/support/messages/active_model_message.rb`.
+
+What changes in the extended versions (high level):
+- Custom validation flow that raises `ValidationError` with structured error hashes.
+- Explicit type checking/coercion on nested objects and arrays.
+- Optional fast-path validation for arrays and cached schema metadata in some enforcers.
+
+## Quick start
+Requirements:
+- Ruby (see `.ruby-version` if present)
+- Bundler
+
+Install and run:
+```
+bundle install
+bundle exec rspec
+```
+
 ## How to run
 ```
 bundle exec rspec
@@ -61,15 +88,76 @@ bundle exec rspec
 
 Results are captured in the `BENCHMARK_*.md` files.
 
-### Happy‑path reports
-1. [BENCHMARK_INITIAL.md](BENCHMARK_INITIAL.md)
-2. [BENCHMARK_DIFF.md](BENCHMARK_DIFF.md)
-3. [BENCHMARK_DIFF_LIGHTWEIGHT_ERRORS.md](BENCHMARK_DIFF_LIGHTWEIGHT_ERRORS.md)
-4. [BENCHMARK_DIFF_FASTPATH_EASYTALK.md](BENCHMARK_DIFF_FASTPATH_EASYTALK.md)
-5. [BENCHMARK_DIFF_FAST_ARRAY_VALIDATION.md](BENCHMARK_DIFF_FAST_ARRAY_VALIDATION.md)
+### Benchmark index
+| Report | Purpose |
+| --- | --- |
+| [BENCHMARK_INITIAL.md](BENCHMARK_INITIAL.md) | Baseline happy-path benchmark. |
+| [BENCHMARK_DIFF.md](BENCHMARK_DIFF.md) | Happy-path diffs for optimizations. |
+| [BENCHMARK_DIFF_LIGHTWEIGHT_ERRORS.md](BENCHMARK_DIFF_LIGHTWEIGHT_ERRORS.md) | Happy-path diff: lightweight error objects. |
+| [BENCHMARK_DIFF_FASTPATH_EASYTALK.md](BENCHMARK_DIFF_FASTPATH_EASYTALK.md) | Happy-path diff: EasyTalk fast-path. |
+| [BENCHMARK_DIFF_FAST_ARRAY_VALIDATION.md](BENCHMARK_DIFF_FAST_ARRAY_VALIDATION.md) | Happy-path diff: faster array validation. |
+| [BENCHMARK_FAILED.md](BENCHMARK_FAILED.md) | Baseline failure-path benchmark. |
+| [BENCHMARK_FAILED_DIFF_LIGHTWEIGHT_ERRORS.md](BENCHMARK_FAILED_DIFF_LIGHTWEIGHT_ERRORS.md) | Failure-path diff: lightweight error objects. |
+| [BENCHMARK_FAILED_DIFF_FASTPATH_EASYTALK.md](BENCHMARK_FAILED_DIFF_FASTPATH_EASYTALK.md) | Failure-path diff: EasyTalk fast-path. |
+| [BENCHMARK_FAILED_DIFF_FAST_ARRAY_VALIDATION.md](BENCHMARK_FAILED_DIFF_FAST_ARRAY_VALIDATION.md) | Failure-path diff: faster array validation. |
+| [BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-01-30.md](BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-01-30.md) | Rails params pipeline comparison (permit!/require/expect + DTO). |
+| [BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md](BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md) | Rails params pipeline comparison including `request_parameters` and `to_unsafe_h`. |
 
-### Failure‑path reports
-1. [BENCHMARK_FAILED.md](BENCHMARK_FAILED.md)
-2. [BENCHMARK_FAILED_DIFF_LIGHTWEIGHT_ERRORS.md](BENCHMARK_FAILED_DIFF_LIGHTWEIGHT_ERRORS.md)
-3. [BENCHMARK_FAILED_DIFF_FASTPATH_EASYTALK.md](BENCHMARK_FAILED_DIFF_FASTPATH_EASYTALK.md)
-4. [BENCHMARK_FAILED_DIFF_FAST_ARRAY_VALIDATION.md](BENCHMARK_FAILED_DIFF_FAST_ARRAY_VALIDATION.md)
+## Rails params benchmarks
+These benchmarks simulate the full Rails controller parameter pipeline before DTO construction.
+
+### Pipelines covered
+| Pipeline | Example chain | Report |
+| --- | --- | --- |
+| Strong Parameters + DTO | `require/permit` or `expect` + `to_h` + DTO | `BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-01-30.md` |
+| Request params + DTO | `request_parameters` + `deep_symbolize_keys` + DTO | `BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md` |
+| Unsafe hash + DTO | `to_unsafe_h` + DTO | `BENCHMARK_INITIAL_RAILS_PARAMS_COMPARISON_2026-02-01.md` |
+
+### Controller-style examples
+Strong Parameters + DTO (permit!/require):
+```ruby
+def create
+  permitted = params.require(:message).permit(:error, :message, details: [:messages])
+  dto = DryStructMessage.new(permitted.to_h)
+  render json: dto
+end
+```
+
+Strong Parameters + DTO (expect):
+```ruby
+def create
+  permitted = params.expect(message: [:error, :message, { details: [:messages] }])
+  dto = SorbetStructMessage.new(permitted.to_h)
+  render json: dto
+end
+```
+
+Request params + deep_symbolize_keys + DTO:
+```ruby
+def create
+  raw = request.request_parameters.deep_symbolize_keys
+  dto = EasyTalkMessage.new(raw)
+  render json: dto
+end
+```
+
+Unsafe hash + DTO:
+```ruby
+def create
+  raw = params.to_unsafe_h
+  dto = ActiveModelMessage.new(raw)
+  render json: dto
+end
+```
+
+## Interpreting benchmark results
+- Time results can vary across runs; compare trends instead of single-run absolutes.
+- Allocations often correlate more tightly with validation overhead than raw time.
+- The failure-path benchmarks include error construction cost, which can dominate total time.
+- When comparing diffs, focus on relative change vs the corresponding baseline.
+- The Rails params comparison reports include the full chain of parameter handling (e.g., `request_parameters` + `deep_symbolize_keys`, `permit!`, `to_unsafe_h`, and `require/permit` or `expect`) before DTO construction.
+
+## Adding a new DTO/validator
+1. Add the DTO implementation in `spec/support/messages/`.
+2. Add or extend specs in `spec/` to exercise both happy and failure paths.
+3. Run the relevant benchmarks and record outputs in a new `BENCHMARK_*.md` file.
