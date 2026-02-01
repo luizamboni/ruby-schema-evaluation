@@ -35,10 +35,6 @@ The repo defines two variants per library:
 - Plain DTOs: baseline library behavior with minimal additions.
 - Extended DTOs: wrap the same schema with custom enforcers for stricter validation, richer errors, nested initializations, and some performance tweaks.
 
-Where to find them:
-- Plain classes live in `spec/support/messages/plain_messages.rb`.
-- Extended classes live in `spec/support/messages/dry_struct_message.rb`, `spec/support/messages/sorbet_struct_message.rb`, `spec/support/messages/easy_talk_message.rb`, and `spec/support/messages/active_model_message.rb`.
-
 ## Unexpected fields (DTO input)
 Behavior when callers pass extra properties that are not defined in the DTO schema (top-level or nested):
 
