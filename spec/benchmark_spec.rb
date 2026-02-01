@@ -121,6 +121,10 @@ RSpec.describe "Validation benchmark" do
     params.deep_symbolize_keys
   end
 
+  def request_params_hash(payload)
+    payload.deep_symbolize_keys
+  end
+
   def rails_params_require_permit_hash(payload)
     params = ActionController::Parameters.new({ payload: payload })
     params.require(:payload).permit(:error, :message, details: { messages: [] })
@@ -144,7 +148,7 @@ RSpec.describe "Validation benchmark" do
 
   def validates_types_for_rails_params_case?(name)
     return false if name == :rails_expect || name == :rails_require_permit
-    base_name = name.to_s.sub(/_unsafe_h\z/, "").to_sym
+    base_name = name.to_s.sub(/_unsafe_h\z/, "").sub(/_request_params\z/, "").to_sym
     return false if base_name == :activemodel_plain || base_name == :activemodel_no_enforcement
     true
   end
@@ -950,12 +954,17 @@ RSpec.describe "Validation benchmark" do
     ])
   end
 
-  it "runs #{ITERATIONS} validations for each approach (Rails params + permit! + DTO)" do
+  it "runs #{ITERATIONS} validations for each approach (Rails params/request params + permit!/to_unsafe_h + DTO)" do
     results = {}
     payload = {
       error: "NOT_FOUND",
       message: "missing",
       details: { messages: ["ok"] }
+    }
+    payload_string = {
+      "error" => "NOT_FOUND",
+      "message" => "missing",
+      "details" => { "messages" => ["ok"] }
     }
 
     results[:dry_validation] = {
@@ -988,6 +997,21 @@ RSpec.describe "Validation benchmark" do
       end
     }
 
+    results[:dry_validation_request_params] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          DryValidataionMessage.new.(params_hash)
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          DryValidataionMessage.new.(params_hash)
+        end
+      end
+    }
+
     results[:dry_struct] = {
       time: Benchmark.realtime do
         run_validations(ITERATIONS) do
@@ -1013,6 +1037,21 @@ RSpec.describe "Validation benchmark" do
       mem: measure_memory do
         run_validations(ITERATIONS) do
           params_hash = rails_params_unsafe_hash(payload)
+          DryStructMessage.new(params_hash)
+        end
+      end
+    }
+
+    results[:dry_struct_request_params] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          DryStructMessage.new(params_hash)
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
           DryStructMessage.new(params_hash)
         end
       end
@@ -1064,6 +1103,29 @@ RSpec.describe "Validation benchmark" do
       end
     }
 
+    results[:dry_struct_plain_request_params] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          DryStructPlainMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: DryStructPlainMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          DryStructPlainMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: DryStructPlainMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      end
+    }
+
     results[:sorbet_struct] = {
       time: Benchmark.realtime do
         run_validations(ITERATIONS) do
@@ -1089,6 +1151,21 @@ RSpec.describe "Validation benchmark" do
       mem: measure_memory do
         run_validations(ITERATIONS) do
           params_hash = rails_params_unsafe_hash(payload)
+          SorbetStructMessage.new(params_hash)
+        end
+      end
+    }
+
+    results[:sorbet_struct_request_params] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          SorbetStructMessage.new(params_hash)
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
           SorbetStructMessage.new(params_hash)
         end
       end
@@ -1140,6 +1217,29 @@ RSpec.describe "Validation benchmark" do
       end
     }
 
+    results[:sorbet_struct_plain_request_params] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          SorbetPlainMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: SorbetPlainMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          SorbetPlainMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: SorbetPlainMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      end
+    }
+
     results[:easytalk] = {
       time: Benchmark.realtime do
         run_validations(ITERATIONS) do
@@ -1165,6 +1265,21 @@ RSpec.describe "Validation benchmark" do
       mem: measure_memory do
         run_validations(ITERATIONS) do
           params_hash = rails_params_unsafe_hash(payload)
+          EasyTalkMessage.new(params_hash)
+        end
+      end
+    }
+
+    results[:easytalk_request_params] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          EasyTalkMessage.new(params_hash)
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
           EasyTalkMessage.new(params_hash)
         end
       end
@@ -1216,6 +1331,29 @@ RSpec.describe "Validation benchmark" do
       end
     }
 
+    results[:easytalk_plain_request_params] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          EasyTalkPlainMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: EasyTalkPlainMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          EasyTalkPlainMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: EasyTalkPlainMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      end
+    }
+
     results[:activemodel] = {
       time: Benchmark.realtime do
         run_validations(ITERATIONS) do
@@ -1241,6 +1379,21 @@ RSpec.describe "Validation benchmark" do
       mem: measure_memory do
         run_validations(ITERATIONS) do
           params_hash = rails_params_unsafe_hash(payload)
+          ActiveModelMessage.new(params_hash)
+        end
+      end
+    }
+
+    results[:activemodel_request_params] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          ActiveModelMessage.new(params_hash)
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
           ActiveModelMessage.new(params_hash)
         end
       end
@@ -1283,6 +1436,29 @@ RSpec.describe "Validation benchmark" do
       mem: measure_memory do
         run_validations(ITERATIONS) do
           params_hash = rails_params_unsafe_hash(payload)
+          ActiveModelPlainMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: ActiveModelPlainMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      end
+    }
+
+    results[:activemodel_plain_request_params] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          ActiveModelPlainMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: ActiveModelPlainMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
           ActiveModelPlainMessage.new(
             error: params_hash[:error],
             message: params_hash[:message],
@@ -1338,6 +1514,29 @@ RSpec.describe "Validation benchmark" do
       end
     }
 
+    results[:activemodel_no_enforcement_request_params] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          ActiveModelNoEnforcementMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: ActiveModelNoEnforcementMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          ActiveModelNoEnforcementMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: ActiveModelNoEnforcementMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      end
+    }
+
     results[:active_record] = {
       time: Benchmark.realtime do
         run_validations(ITERATIONS) do
@@ -1368,7 +1567,22 @@ RSpec.describe "Validation benchmark" do
       end
     }
 
-    puts "\n== validation (rails params + permit!/to_unsafe_h + dto, #{ITERATIONS} iterations) =="
+    results[:active_record_request_params] = {
+      time: Benchmark.realtime do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          ActiveRecordMessage.new(params_hash)
+        end
+      end,
+      mem: measure_memory do
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          ActiveRecordMessage.new(params_hash)
+        end
+      end
+    }
+
+    puts "\n== validation (rails params/request params + permit!/to_unsafe_h + dto, #{ITERATIONS} iterations) =="
     puts format("%-30s %10s %12s %12s %14s", "name", "time(s)", "us/op", "bytes", "validates")
     results
       .sort_by { |_, data| data[:time] }
@@ -1381,34 +1595,50 @@ RSpec.describe "Validation benchmark" do
     expect(results.keys).to match_array([
       :dry_validation,
       :dry_validation_unsafe_h,
+      :dry_validation_request_params,
       :dry_struct,
       :dry_struct_unsafe_h,
+      :dry_struct_request_params,
       :dry_struct_plain,
       :dry_struct_plain_unsafe_h,
+      :dry_struct_plain_request_params,
       :sorbet_struct,
       :sorbet_struct_unsafe_h,
+      :sorbet_struct_request_params,
       :sorbet_struct_plain,
       :sorbet_struct_plain_unsafe_h,
+      :sorbet_struct_plain_request_params,
       :easytalk,
       :easytalk_unsafe_h,
+      :easytalk_request_params,
       :easytalk_plain,
       :easytalk_plain_unsafe_h,
+      :easytalk_plain_request_params,
       :activemodel,
       :activemodel_unsafe_h,
+      :activemodel_request_params,
       :activemodel_plain,
       :activemodel_plain_unsafe_h,
+      :activemodel_plain_request_params,
       :activemodel_no_enforcement,
       :activemodel_no_enforcement_unsafe_h,
+      :activemodel_no_enforcement_request_params,
       :active_record,
-      :active_record_unsafe_h
+      :active_record_unsafe_h,
+      :active_record_request_params
     ])
   end
 
-  it "profiles allocations for each approach (Rails params + permit!/to_unsafe_h + DTO, #{ITERATIONS} iterations)" do
+  it "profiles allocations for each approach (Rails params/request params + permit!/to_unsafe_h + DTO, #{ITERATIONS} iterations)" do
     payload = {
       error: "NOT_FOUND",
       message: "missing",
       details: { messages: ["ok"] }
+    }
+    payload_string = {
+      "error" => "NOT_FOUND",
+      "message" => "missing",
+      "details" => { "messages" => ["ok"] }
     }
 
     profiles = {
@@ -1424,6 +1654,12 @@ RSpec.describe "Validation benchmark" do
           DryValidataionMessage.new.(params_hash)
         end
       },
+      dry_validation_request_params: -> {
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          DryValidataionMessage.new.(params_hash)
+        end
+      },
       dry_struct: -> {
         run_validations(ITERATIONS) do
           params_hash = rails_params_permit_all_hash(payload)
@@ -1433,6 +1669,12 @@ RSpec.describe "Validation benchmark" do
       dry_struct_unsafe_h: -> {
         run_validations(ITERATIONS) do
           params_hash = rails_params_unsafe_hash(payload)
+          DryStructMessage.new(params_hash)
+        end
+      },
+      dry_struct_request_params: -> {
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
           DryStructMessage.new(params_hash)
         end
       },
@@ -1456,6 +1698,16 @@ RSpec.describe "Validation benchmark" do
           )
         end
       },
+      dry_struct_plain_request_params: -> {
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          DryStructPlainMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: DryStructPlainMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      },
       sorbet_struct: -> {
         run_validations(ITERATIONS) do
           params_hash = rails_params_permit_all_hash(payload)
@@ -1465,6 +1717,12 @@ RSpec.describe "Validation benchmark" do
       sorbet_struct_unsafe_h: -> {
         run_validations(ITERATIONS) do
           params_hash = rails_params_unsafe_hash(payload)
+          SorbetStructMessage.new(params_hash)
+        end
+      },
+      sorbet_struct_request_params: -> {
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
           SorbetStructMessage.new(params_hash)
         end
       },
@@ -1488,6 +1746,16 @@ RSpec.describe "Validation benchmark" do
           )
         end
       },
+      sorbet_struct_plain_request_params: -> {
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          SorbetPlainMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: SorbetPlainMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      },
       easytalk: -> {
         run_validations(ITERATIONS) do
           params_hash = rails_params_permit_all_hash(payload)
@@ -1497,6 +1765,12 @@ RSpec.describe "Validation benchmark" do
       easytalk_unsafe_h: -> {
         run_validations(ITERATIONS) do
           params_hash = rails_params_unsafe_hash(payload)
+          EasyTalkMessage.new(params_hash)
+        end
+      },
+      easytalk_request_params: -> {
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
           EasyTalkMessage.new(params_hash)
         end
       },
@@ -1520,6 +1794,16 @@ RSpec.describe "Validation benchmark" do
           )
         end
       },
+      easytalk_plain_request_params: -> {
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          EasyTalkPlainMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: EasyTalkPlainMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      },
       activemodel: -> {
         run_validations(ITERATIONS) do
           params_hash = rails_params_permit_all_hash(payload)
@@ -1529,6 +1813,12 @@ RSpec.describe "Validation benchmark" do
       activemodel_unsafe_h: -> {
         run_validations(ITERATIONS) do
           params_hash = rails_params_unsafe_hash(payload)
+          ActiveModelMessage.new(params_hash)
+        end
+      },
+      activemodel_request_params: -> {
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
           ActiveModelMessage.new(params_hash)
         end
       },
@@ -1545,6 +1835,16 @@ RSpec.describe "Validation benchmark" do
       activemodel_plain_unsafe_h: -> {
         run_validations(ITERATIONS) do
           params_hash = rails_params_unsafe_hash(payload)
+          ActiveModelPlainMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: ActiveModelPlainMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      },
+      activemodel_plain_request_params: -> {
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
           ActiveModelPlainMessage.new(
             error: params_hash[:error],
             message: params_hash[:message],
@@ -1572,6 +1872,16 @@ RSpec.describe "Validation benchmark" do
           )
         end
       },
+      activemodel_no_enforcement_request_params: -> {
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
+          ActiveModelNoEnforcementMessage.new(
+            error: params_hash[:error],
+            message: params_hash[:message],
+            details: ActiveModelNoEnforcementMessageDetails.new(messages: params_hash[:details][:messages])
+          )
+        end
+      },
       active_record: -> {
         run_validations(ITERATIONS) do
           params_hash = rails_params_permit_all_hash(payload)
@@ -1581,6 +1891,12 @@ RSpec.describe "Validation benchmark" do
       active_record_unsafe_h: -> {
         run_validations(ITERATIONS) do
           params_hash = rails_params_unsafe_hash(payload)
+          ActiveRecordMessage.new(params_hash)
+        end
+      },
+      active_record_request_params: -> {
+        run_validations(ITERATIONS) do
+          params_hash = request_params_hash(payload_string)
           ActiveRecordMessage.new(params_hash)
         end
       }
@@ -1601,7 +1917,7 @@ RSpec.describe "Validation benchmark" do
         end
       end
       .each do |name, report|
-        puts "\n== #{name} (rails params + permit!/to_unsafe_h + dto, #{ITERATIONS} iterations) =="
+        puts "\n== #{name} (rails params/request params + permit!/to_unsafe_h + dto, #{ITERATIONS} iterations) =="
         report.pretty_print(
           to_file: nil,
           scale_bytes: true,
@@ -1613,26 +1929,37 @@ RSpec.describe "Validation benchmark" do
     expect(profiles.keys).to match_array([
       :dry_validation,
       :dry_validation_unsafe_h,
+      :dry_validation_request_params,
       :dry_struct,
       :dry_struct_unsafe_h,
+      :dry_struct_request_params,
       :dry_struct_plain,
       :dry_struct_plain_unsafe_h,
+      :dry_struct_plain_request_params,
       :sorbet_struct,
       :sorbet_struct_unsafe_h,
+      :sorbet_struct_request_params,
       :sorbet_struct_plain,
       :sorbet_struct_plain_unsafe_h,
+      :sorbet_struct_plain_request_params,
       :easytalk,
       :easytalk_unsafe_h,
+      :easytalk_request_params,
       :easytalk_plain,
       :easytalk_plain_unsafe_h,
+      :easytalk_plain_request_params,
       :activemodel,
       :activemodel_unsafe_h,
+      :activemodel_request_params,
       :activemodel_plain,
       :activemodel_plain_unsafe_h,
+      :activemodel_plain_request_params,
       :activemodel_no_enforcement,
       :activemodel_no_enforcement_unsafe_h,
+      :activemodel_no_enforcement_request_params,
       :active_record,
-      :active_record_unsafe_h
+      :active_record_unsafe_h,
+      :active_record_request_params
     ])
   end
 
